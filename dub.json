@@ -1,0 +1,12 @@
+{
+	"name": "dgraphics",
+	"description": "Some Graphics",
+	"copyright": "Copyright © 2014, snuffy",
+	"authors": ["snuffy"],
+	"targetPath" : "$PACKAGE_DIR/bin",
+	"dependencies": 
+	{
+		"derelict-glfw3": ">=1.0.0",
+		"derelict-gl3": "~master"
+	}
+}
