@@ -2,6 +2,7 @@
 
 import std.conv;
 import std.traits;
+import std.math;
 
 alias mat2 = matrix!(2, 2, float);
 alias mat3 = matrix!(3, 3, float);
@@ -535,6 +536,180 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 	return augment;
 }
 
+/**
+ * Constructs a 3d projection matrix
+ */
+auto projection(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=true)
+{
+	//
+	// General form of the Projection Matrix
+	//
+	// uh = Cot( fov/2 ) == 1/Tan(fov/2)
+	// uw / uh = 1/aspect
+	// 
+	//   uw         0       0       0
+	//    0        uh       0       0
+	//    0         0      f/(f-n)  1
+	//    0         0    -fn/(f-n)  0
+	//
+	// Make result to be identity first
+
+	// check for bad parameters to avoid divide by zero:
+	// if found, assert and return an identity matrix.
+	assert(fov > 0, "Fov is less than or equals to zero");
+	assert(aspect != 0, "Aspect equals zero");
+	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
+	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
+	static assert(isNumeric!T, T.stringof ~ " is not numaric");
+
+	auto result = identity!(4,T);
+	T frustumDepth = farDist - nearDist;
+	T oneOverDepth = 1 / frustumDepth;
+
+	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
+	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
+	result[2,2] = (farDist * oneOverDepth);
+	result[3,2] = ((-farDist * nearDist) * oneOverDepth);
+	result[2,3] = 1;
+	result[3,3] = 0;
+	return result;
+}
+
+/// Constructs a quaternion for rotation
+auto quaternion(T=float)(vector!(3,T) axis, T angle)
+{
+	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
+	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
+	static assert(isNumeric!T, T.stringof ~ " is not numaric");
+
+	T c = cast(T)cos(angle/2);
+	T s = cast(T)sin(angle/2);
+	return vector!(4,T)(s*axis.x,s*axis.y,s*axis.z,c);
+}
+
+auto length(int m, T)(matrix!(m,1,T) vec)
+{
+	return dot(vec,vec);
+}
+
+auto normalize(int m, T)(matrix!(m,1,T) vec)
+{
+	return vec/vec.length;
+}
+
+/**
+ * Constructs a rotation matrix
+ * Quaternion to rotation matrix
+ */
+auto rotationMatrix(T=float)(vector!(4,T) q)
+{
+	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
+	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
+	static assert(isNumeric!T, T.stringof ~ " is not numaric");
+
+	auto result = identity!(4,T);
+	q = normalize(q);
+	alias x = q.x;
+	alias y = q.y;
+	alias z = q.z;
+	alias w = q.w;
+	result[0,0] = 1 - 2*y*y - 2*z*z;
+	result[0,1] = 2*x*y - 2*z*w;
+	result[0,2] = 2*x*z + 2*y*w;
+	result[1,0] = 2*x*y + 2*z*w;
+	result[1,1] = 1 - 2*x*x - 2*z*z;
+	result[1,2] = 2*y*z - 2*x*w;
+	result[2,0] = 2*x*z - 2*y*w;
+	result[2,1] = 2*y*z + 2*x*w;
+	result[2,2] = 1 - 2*x*x - 2*y*y;
+	return result;
+}
+
+/**
+ * Constructs a rotation matrix
+ * axis+angle to rotation matrix
+ */
+auto rotationMatrix(T=float)(vector!(3,T) axis, T angle)
+{
+	return rotation(quaternion(axis, angle));
+}
+
+/// Construct a scaling matrix
+auto scalingMatrix(T=float)(T x, T y, T z)
+{
+	auto r = identity!(4, T);
+	r[0,0] = x;
+	r[1,1] = y;
+	r[2,2] = z;
+	return r;
+}
+
+/// Construct a scaling matrix
+auto scalingMatrix(T=float)(vector!(3,T) v)
+{
+	auto r = identity!(4, T);
+	r[0,0] = v.x;
+	r[1,1] = v.y;
+	r[2,2] = v.z;
+	return r;
+}
+
+/// Constructs a translation matrix
+auto translationMatrix(T=float)(T x, T y, T z)
+{
+	auto r = identity!(4, T);
+	r[0,3] = x;
+	r[1,3] = y;
+	r[2,3] = z;
+	return r;
+}
+
+/// Constructs a translation matrix
+auto translationMatrix(T=float)(vector!(3,T) v)
+{
+	auto r = identity!(4, T);
+	r[0,3] = v.x;
+	r[1,3] = v.y;
+	r[2,3] = v.z;
+	return r;
+}
+
+/// Rotates a transformation matrix by a quaternion
+auto rotate(T=float)(matrix!(4,4,T) m,vector!(4,T) q)
+{
+	return m*rotationMatrix(q);
+}
+
+/// Rotates a transformation matrix around an axis
+auto rotate(T=float)(matrix!(4,4,T) m,vector!(3,T) axis, T angle)
+{
+	return m*rotationMatrix(quaternion(axis,angle));
+}
+
+/// Translates a transformation matrix
+auto translate(T=float)(matrix!(4,4,T) m, T x, T y, T z)
+{
+	return m*translationMatrix(x,y,z);
+}
+
+/// Translates a transformation matrix
+auto translate(T=float)(matrix!(4,4,T) m, vector!(3,T) v)
+{
+	return m*translationMatrix(v);
+}
+
+/// Scale a transformation matrix
+auto scale(T=float)(matrix!(4,4,T) m, T x, T y, T z)
+{
+	return m*scalingMatrix(x,y,z);
+}
+
+/// Scale a transformation matrix
+auto scale(T=float)(matrix!(4,4,T) m, vector!(3,T) v)
+{
+	return m*scalingMatrix(v);
+}
+
 // just some trash...
 private auto arrayInit(int m, int n, T)(T v)
 {
@@ -545,3 +720,4 @@ private auto arrayInit(int m, int n, T)(T v)
 	}
 	return rtn;
 }
+

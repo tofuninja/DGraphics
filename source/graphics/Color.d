@@ -1,53 +1,56 @@
 ﻿module graphics.Color;
 
-import std.conv;
-
 struct Color
 {
-	this(uint bgra)
+	this(uint rgba)
 	{
-		BGRA = bgra;
+		RGBA = rgba;
 	}
 
-	this(int red, int green, int blue, int alpha)
+	this(ubyte red, ubyte green, ubyte blue, ubyte alpha)
 	{
-		R = cast(ubyte) red;
-		G = cast(ubyte) green;
-		B = cast(ubyte) blue;
-		A = cast(ubyte) alpha;
+		R = red;
+		G = green;
+		B = blue;
+		A = alpha;
 	}
 
-	this(int red, int green, int blue)
+	this(ubyte red, ubyte green, ubyte blue)
 	{
 		this(red,green,blue,255);
 	}
 
 	union
 	{
-		uint m_BGRA;
+		uint m_RGBA;
 		struct
 		{
-			ubyte m_Blue;
-			ubyte m_Green;
 			ubyte m_Red;
+			ubyte m_Green;
+			ubyte m_Blue;
 			ubyte m_Alpha;
 		}
 	}
 
 	public string toString()
 	{
+		import std.conv;
 		return "Color(" ~ R.to!string ~ "," ~ G.to!string  ~ "," ~ B.to!string  ~ "," ~ A.to!string  ~ ")";
 	}
 
 	public alias R = m_Red;
 	public alias Red = m_Red;
+
 	public alias G = m_Green;
 	public alias Green = m_Green;
+
 	public alias B = m_Blue;
 	public alias Blue = m_Blue;
+
 	public alias A = m_Alpha;
 	public alias Alpha = m_Alpha;
-	public alias BGRA = m_BGRA;
+
+	public alias RGBA = m_RGBA;
 }
 
 /*

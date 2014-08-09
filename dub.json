@@ -2,11 +2,14 @@
 	"name": "dgraphics",
 	"description": "Some Graphics",
 	"copyright": "Copyright © 2014, snuffy",
-	"authors": ["snuffy"],
+	"authors": ["Snuffy"],
 	"targetPath" : "$PACKAGE_DIR/bin",
 	"dependencies": 
 	{
 		"derelict-glfw3": ">=1.0.0",
-		"derelict-gl3": "~master"
+		"derelict-gl3": "~master",
+		"derelict-fi": "~master",
+		"pegged": "~master" 
 	}
 }
+ 

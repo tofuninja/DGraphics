@@ -8,6 +8,7 @@ import std.stdio;
  * currently only supports saving in 32bit color format using 
  * the BITMAPINFOHEADER header format. 
  */
+/*
 public void saveAsBmp(Image img, string file)
 {
 	File f = File(file,"w");
@@ -41,3 +42,4 @@ public void saveAsBmp(Image img, string file)
 	f.rawWrite(img.m_data);
 	f.flush();
 }
+*/
