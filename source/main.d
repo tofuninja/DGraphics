@@ -38,16 +38,20 @@ void main(string[] args)
 
 	writeln("OpenGl Version:", DerelictGL3.loadedVersion);
 
-	// Enforce min gl version
+	// Enforce required gl
 	{
 		import std.exception;
-		enforce(DerelictGL3.loadedVersion >= GLVersion.GL43, "Min gl version is 4.3");
+		enforce(DerelictGL3.loadedVersion >= GLVersion.GL40, "Min Gl version is 4.0");
+		enforce(ARB_program_interface_query, "Requires either ARB_program_interface_query or Gl version 4.3");
 	}
 
 	// Shader test
 	{
 		import graphics.shader;
 		auto prog = shaderProgram(shader(vsSource, shaderStage.vertex), shader(fsSource, shaderStage.fragment));
+
+
+		writeln(prog.uniforms);
 	}
 
 
@@ -62,7 +66,6 @@ void main(string[] args)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
 }
 
 
@@ -71,15 +74,18 @@ string vsSource =
 q{
 #version 330
 	
-	uniform mat4 mvp;
+	uniform mat4 mvpHAHA;
+
+	uniform float otherUni;
+
 	layout(location = 0) in vec4 pos;
 	layout(location = 1) in vec4 col;
 	out vec4 color;
 	
 	void main()
 	{
-		gl_Position = mvp*pos;
-		color = col;
+		gl_Position = mvpHAHA*pos;
+		color = col*otherUni;
 	}
 	
 };

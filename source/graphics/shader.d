@@ -3,7 +3,9 @@
 import derelict.opengl3.gl3;
 import std.variant;
 
-
+/**
+ * OpenGl graphics pipe line stages
+ */
 enum shaderStage
 {
 	invalid = 0,
@@ -15,10 +17,9 @@ enum shaderStage
 	compute = GL_COMPUTE_SHADER
 }
 
-
-
-
-
+/**
+ * Represents an openGl shader
+ */
 struct shader
 {
 	private bool created = false;
@@ -90,12 +91,14 @@ struct shader
 	@property public bool valid(){return created;}
 }
 
+/**
+ * Represents an openGl shader program
+ */
 struct shaderProgram
 {
 	private bool created = false;
 	private GLuint id = 0;
-	private shaderUniform[string] uniforms;
-
+	public shaderUniform[string] uniforms;
 
 	public this(shader[] shaders ...)
 	{
@@ -144,6 +147,9 @@ struct shaderProgram
 			glDetachShader(id, s.m_id);
 		}
 
+		// Get info about shader
+		getUniforms();
+
 		created = true;
 	}
 
@@ -176,13 +182,23 @@ struct shaderProgram
 		return id;
 	}
 
+	/** 
+	 * Grab info about each uniform, requires GL4.3 or ARB_PROGRAM_INTERFACE_QUERY
+	 */
 	private void getUniforms()
 	{
 		import std.stdio;
+
+		// Empty out uniforms array
+		foreach (key; uniforms.keys) 
+		{
+			uniforms.remove(key);
+		}
+
+		// Get current program's uniform count
 		GLint numUniforms = 0;
 		glGetProgramInterfaceiv(id, GL_UNIFORM, GL_ACTIVE_RESOURCES, &numUniforms);
-
-		writeln("Uniform Count:", numUniforms);
+		//writeln("Uniform Count:", numUniforms);
 
 		const GLenum properties[4] = [GL_BLOCK_INDEX, GL_TYPE, GL_NAME_LENGTH, GL_LOCATION];
 		for(int unif = 0; unif < numUniforms; unif++)
@@ -190,32 +206,29 @@ struct shaderProgram
 			GLint values[4];
 			glGetProgramResourceiv(id, GL_UNIFORM, unif, 4, properties.ptr, 4, null, values.ptr);
 
-			//writeln("GL_BLOCK_INDEX\t", values[0]);
-			//writeln("GL_TYPE\t\t", values[1]);
-			//writeln("GL_NAME_LENGTH\t", values[2]);
-			//writeln("GL_LOCATION\t", values[3]);
-
-			//writeln("Type:", toTypeInfo(values[1]));
-
 			//Skip any uniforms that are in a block.
 			if(values[0] != -1) continue;
 
-			char[] nameData = new char[values[2]];
-			glGetProgramResourceName(id, GL_UNIFORM, unif, nameData.length, null, nameData.ptr);
-			//writeln(nameData);
+			char[] uniformName = new char[values[2]];
+			glGetProgramResourceName(id, GL_UNIFORM, unif, uniformName.length, null, uniformName.ptr);
+			uniformName.length--; // We dont need the terminating zero, this is D!
+			uniforms[uniformName.idup] = shaderUniform(toTypeInfo(values[1]), values[3]);
 		}
 	}
-
-
-
 }
 
-private struct shaderUniform
+/**
+ * Represents the location and type information of a shader uniform
+ */
+public struct shaderUniform
 {
 	TypeInfo type;
-
+	GLint location;
 }
 
+/**
+ * Converts the type enum returned from openGl program interface query to the type info of the corisponding D type
+ */
 private TypeInfo toTypeInfo(GLint gl_type)
 {
 	import math.matrix;
