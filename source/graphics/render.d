@@ -26,7 +26,7 @@ struct triangleRaster
 		m_data = arr.sort!("a.y < b.y").array;
 	}
 
-	int opApply(int delegate(vec2i) dg)
+	int opApply(int delegate(ivec2) dg)
 	{
 		int result = 0;
 		if (m_data[1].y == m_data[2].y)
@@ -51,7 +51,7 @@ struct triangleRaster
 		return result;
 	}
 
-	private int fillTop(vec2 v1, vec2 v2, vec2 v3, int delegate(vec2i) dg)
+	private int fillTop(vec2 v1, vec2 v2, vec2 v3, int delegate(ivec2) dg)
 	{
 		int result = 0;
 		
@@ -72,7 +72,7 @@ struct triangleRaster
 		return result;
 	}
 
-	private int fillBot(vec2 v1, vec2 v2, vec2 v3, int delegate(vec2i) dg)
+	private int fillBot(vec2 v1, vec2 v2, vec2 v3, int delegate(ivec2) dg)
 	{
 		int result = 0;
 
@@ -93,7 +93,7 @@ struct triangleRaster
 		return result;
 	}
 
-	private int fillLine(int x1, int x2, int y, int delegate(vec2i) dg)
+	private int fillLine(int x1, int x2, int y, int delegate(ivec2) dg)
 	{
 		int result = 0;
 		if(x2 < x1)
@@ -105,7 +105,7 @@ struct triangleRaster
 
 		for(int x = x1 ; x <= x2; x++)
 		{
-			result = dg(vec2i(x,y));
+			result = dg(ivec2(x,y));
 			if (result) break;
 		}
 		return result;
@@ -135,7 +135,7 @@ struct lineRaster
 	}
 
 
-	int opApply(int delegate(vec2i) dg)
+	int opApply(int delegate(ivec2) dg)
 	{
 		int result = 0;
 
@@ -147,7 +147,7 @@ struct lineRaster
 		int e2;
 		
 		for(;;){
-			result = dg(vec2i(x0,y0));
+			result = dg(ivec2(x0,y0));
 			if ( result || (x0==x1 && y0==y1) ) break;
 			e2 = err;
 			if (e2 >-dx) { err -= dy; x0 += sx; }

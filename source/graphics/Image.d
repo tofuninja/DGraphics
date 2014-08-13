@@ -32,12 +32,12 @@ struct Image
 		return c;
 	}
 
-	Color opIndex(vec2i index)
+	Color opIndex(ivec2 index)
 	{
 		return opIndex(index.x,index.y);
 	}
 	
-	Color opIndexAssign(Color c, vec2i index)
+	Color opIndexAssign(Color c, ivec2 index)
 	{
 		return opIndexAssign(c, index.x, index.y);
 	}

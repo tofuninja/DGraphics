@@ -8,13 +8,21 @@ alias mat2 = matrix!(2, 2, float);
 alias mat3 = matrix!(3, 3, float);
 alias mat4 = matrix!(4, 4, float);
 
-alias mat2d = matrix!(2, 2, double);
-alias mat3d = matrix!(3, 3, double);
-alias mat4d = matrix!(4, 4, double);
+alias dmat2 = matrix!(2, 2, double);
+alias dmat3 = matrix!(3, 3, double);
+alias dmat4 = matrix!(4, 4, double);
 
-alias mat2i = matrix!(2, 2, int);
-alias mat3i = matrix!(3, 3, int);
-alias mat4i = matrix!(4, 4, int);
+alias imat2 = matrix!(2, 2, int);
+alias imat3 = matrix!(3, 3, int);
+alias imat4 = matrix!(4, 4, int);
+
+alias umat2 = matrix!(2, 2, uint);
+alias umat3 = matrix!(3, 3, uint);
+alias umat4 = matrix!(4, 4, uint);
+
+alias bmat2 = matrix!(2, 2, bool);
+alias bmat3 = matrix!(3, 3, bool);
+alias bmat4 = matrix!(4, 4, bool);
 
 /**
  * Vectors are simply matrices with only 1 column. 
@@ -28,13 +36,21 @@ alias vec2 = matrix!(2,1);
 alias vec3 = matrix!(3,1);
 alias vec4 = matrix!(4,1);
 
-alias vec2d = matrix!(2,1,double);
-alias vec3d = matrix!(3,1,double);
-alias vec4d = matrix!(4,1,double);
+alias dvec2 = matrix!(2,1,double);
+alias dvec3 = matrix!(3,1,double);
+alias dvec4 = matrix!(4,1,double);
 
-alias vec2i = matrix!(2,1,int);
-alias vec3i = matrix!(3,1,int);
-alias vec4i = matrix!(4,1,int);
+alias ivec2 = matrix!(2,1,int);
+alias ivec3 = matrix!(3,1,int);
+alias ivec4 = matrix!(4,1,int);
+
+alias uvec2 = matrix!(2,1,uint);
+alias uvec3 = matrix!(3,1,uint);
+alias uvec4 = matrix!(4,1,uint);
+
+alias bvec2 = matrix!(2,1,bool);
+alias bvec3 = matrix!(3,1,bool);
+alias bvec4 = matrix!(4,1,bool);
 
 /**
  * Simple matrix implimentation.

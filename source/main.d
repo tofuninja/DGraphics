@@ -36,113 +36,19 @@ void main(string[] args)
 	glfwMakeContextCurrent(window);
 	DerelictGL3.reload();
 
-	writeln(DerelictGL3.loadedVersion);
+	writeln("OpenGl Version:", DerelictGL3.loadedVersion);
 
-
-	struct vertex
+	// Enforce min gl version
 	{
-		vec4 pos;
-		vec4 color;
-	}
-	vertex[7] data;
-
-	data[0].pos = vec4(0,0,0,1);
-	data[0].color = vec4(1,0,0,1);
-
-	data[1].pos = vec4(1,0,0,1);
-	data[1].color = vec4(1,0,0,1);
-
-	data[2].pos = vec4(0,1,0,1);
-	data[2].color = vec4(0,1,0,1);
-
-	data[3].pos = vec4(1,1,0,1);
-	data[3].color = vec4(0,1,0,1);
-
-	data[4].pos = vec4(1,1,1,1);
-	data[4].color = vec4(0,0,1,1);
-
-	data[5].pos = vec4(0,1,1,1);
-	data[5].color = vec4(0,0,1,1);
-
-	data[6].pos = vec4(0,1,0,1);
-	data[6].color = vec4(0,1,0,1);
-
-
-
-	GLuint vbo;
-	glGenBuffers(1,&vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, data.sizeof, data.ptr, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-
-	const char* vsc = vsSource.toStringz;
-	const char* fsc = fsSource.toStringz;
-
-	glShaderSource(vs,1, &vsc, null);
-	glCompileShader(vs);
-	GLint isCompiled = 0;
-	glGetShaderiv(vs, GL_COMPILE_STATUS, &isCompiled);
-	if(isCompiled == GL_FALSE)
-	{
-		GLint maxLength = 0;
-		glGetShaderiv(vs, GL_INFO_LOG_LENGTH, &maxLength);
-		char[] log = new char[maxLength];
-		glGetShaderInfoLog(vs, maxLength, &maxLength, log.ptr);
-		writeln(log);
-		glDeleteShader(vs);
+		import std.exception;
+		enforce(DerelictGL3.loadedVersion >= GLVersion.GL43, "Min gl version is 4.3");
 	}
 
-	glShaderSource(fs,1, &fsc, null);
-	glCompileShader(fs);
-	isCompiled = 0;
-	glGetShaderiv(fs, GL_COMPILE_STATUS, &isCompiled);
-	if(isCompiled == GL_FALSE)
+	// Shader test
 	{
-		GLint maxLength = 0;
-		glGetShaderiv(fs, GL_INFO_LOG_LENGTH, &maxLength);
-		char[] log = new char[maxLength];
-		glGetShaderInfoLog(fs, maxLength, &maxLength, log.ptr);
-		writeln(log);
-		glDeleteShader(fs);
+		import graphics.shader;
+		auto prog = shaderProgram(shader(vsSource, shaderStage.vertex), shader(fsSource, shaderStage.fragment));
 	}
-
-	GLuint program = glCreateProgram();
-	
-	//Attach our shaders to our program
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	
-	//Link our program
-	glLinkProgram(program);
-	
-	//Note the different functions here: glGetProgram* instead of glGetShader*.
-	GLint isLinked = 0;
-	glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-	if(isLinked == GL_FALSE)
-	{
-		GLint maxLength = 0;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-		char[] log = new char[maxLength];
-		glGetProgramInfoLog(program, maxLength, &maxLength, log.ptr);
-		writeln(log);
-		glDeleteProgram(program);
-		glDeleteShader(vs);
-		glDeleteShader(fs);
-	}
-	
-	//Always detach shaders after a successful link.
-	glDetachShader(program, vs);
-	glDetachShader(program, fs);
-	glDeleteShader(vs);
-	glDeleteShader(fs);
-
-
-	GLuint mvpUniform = glGetUniformLocation(program, "mvp\0");
-
-
 
 
 
@@ -160,9 +66,10 @@ void main(string[] args)
 }
 
 
+
 string vsSource = 
 q{
-	#version 330
+#version 330
 	
 	uniform mat4 mvp;
 	layout(location = 0) in vec4 pos;
@@ -179,7 +86,7 @@ q{
 
 string fsSource = 
 q{
-	#version 330
+#version 330
 	in vec4 color;
 	out vec4 fragColor;
 	void main()
