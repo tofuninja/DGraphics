@@ -187,7 +187,8 @@ struct shaderProgram
 	 */
 	private void getUniforms()
 	{
-		import std.stdio;
+		//import std.stdio;
+		import graphics.Texture;
 
 		// Empty out uniforms array
 		foreach (key; uniforms.keys) 
@@ -198,7 +199,7 @@ struct shaderProgram
 		// Get current program's uniform count
 		GLint numUniforms = 0;
 		glGetProgramInterfaceiv(id, GL_UNIFORM, GL_ACTIVE_RESOURCES, &numUniforms);
-		//writeln("Uniform Count:", numUniforms);
+
 
 		const GLenum properties[4] = [GL_BLOCK_INDEX, GL_TYPE, GL_NAME_LENGTH, GL_LOCATION];
 		for(int unif = 0; unif < numUniforms; unif++)
@@ -209,10 +210,75 @@ struct shaderProgram
 			//Skip any uniforms that are in a block.
 			if(values[0] != -1) continue;
 
-			char[] uniformName = new char[values[2]];
+			char[] uniformName = new char[values[2]]; 	// uniform name
+			TypeInfo type = toTypeInfo(values[1]);		// uniform type
+			GLint loc = values[3];						// uniform location
+			int tag = 0; 								// uniform tag to add any extrea info to the uniform
+
 			glGetProgramResourceName(id, GL_UNIFORM, unif, uniformName.length, null, uniformName.ptr);
 			uniformName.length--; // We dont need the terminating zero, this is D!
-			uniforms[uniformName.idup] = shaderUniform(toTypeInfo(values[1]), values[3]);
+			uniforms[uniformName.idup] = shaderUniform(type, loc, tag);
+		}
+	}
+
+	// TODO: Detect uniform blocks
+
+	public void setUniform(T)(string name, T value)
+	{
+		import math.matrix;
+		import graphics.Texture;
+		import graphics.GraphicsState;
+
+		shaderUniform* uni = (name in uniforms);
+		if(uni == null) return; // posible for this to not be an error if the uniform is not active so we will just treat it like nothing happened
+		enforce(typeid(T) == uni.type, "Type of value does not match uniform type");
+
+		// Not sure but this might need to change depending on how I set up my mats... 
+		enum transposeMats = false;
+
+		// upload uniform value into opengl based on type
+		static if(is(T == float)) 	glProgramUniform1f(id, uni.location, value);
+		else if(is(T == vec2)) 		glProgramUniform2fv(id, 6i.location, 1, value.m_data.ptr);
+		else if(is(T == vec3)) 		glProgramUniform3fv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == vec4)) 		glProgramUniform4fv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == double)) 	glProgramUniform1d(id, uni.location, value);
+		else if(is(T == dvec2)) 	glProgramUniform2dv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == dvec3)) 	glProgramUniform3dv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == dvec4)) 	glProgramUniform4dv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == int)) 		glProgramUniform1i(id, uni.location, value);
+		else if(is(T == ivec2)) 	glProgramUniform2iv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == ivec3)) 	glProgramUniform3iv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == ivec4))		glProgramUniform4iv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == uint))		glProgramUniform1ui(id, uni.location, value);
+		else if(is(T == uvec2))		glProgramUniform2uiv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == uvec3))		glProgramUniform3uiv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == uvec4))		glProgramUniform4uiv(id, uni.location, 1, value.m_data.ptr);
+		else if(is(T == bool))		glProgramUniform1i(id, uni.location, cast(int)value);
+		else if(is(T == bvec2))		glProgramUniform2i(id, uni.location, cast(int)value.x,cast(int)value.y);
+		else if(is(T == bvec3))		glProgramUniform3i(id, uni.location, cast(int)value.x, cast(int)value.y, cast(int)value.z);
+		else if(is(T == bvec4))		glProgramUniform4i(id, uni.location, cast(int)value.x, cast(int)value.y, cast(int)value.z, cast(int)value.w);
+		else if(is(T == mat2))		glProgramUniformMatrix2fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == mat3))		glProgramUniformMatrix3fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == mat4))		glProgramUniformMatrix4fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(2,3,float))) glProgramUniformMatrix2x3fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(2,4,float))) glProgramUniformMatrix2x4fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(3,2,float))) glProgramUniformMatrix3x2fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(3,4,float))) glProgramUniformMatrix3x4fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(4,2,float))) glProgramUniformMatrix4x2fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(4,3,float))) glProgramUniformMatrix4x3fv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == dmat2)) 	glProgramUniformMatrix2dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == dmat3)) 	glProgramUniformMatrix3dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == dmat4))		glProgramUniformMatrix4dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(2,3,double))) glProgramUniformMatrix2x3dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(2,4,double))) glProgramUniformMatrix2x4dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(3,2,double))) glProgramUniformMatrix3x2dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(3,4,double))) glProgramUniformMatrix3x4dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(4,2,double))) glProgramUniformMatrix4x2dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == matrix!(4,3,double))) glProgramUniformMatrix4x3dv(id, uni.location, 1, transposeMats, m_data.ptr);
+		else if(is(T == TextureImageUnit)) glProgramUniform1i(id, uni.location, value.location);	
+		else
+		{
+			static assert(false,"Unsuported Type " ~ T.stringof);
 		}
 	}
 }
@@ -222,8 +288,12 @@ struct shaderProgram
  */
 public struct shaderUniform
 {
+	import math.matrix;
+	import graphics.Texture;
+
 	TypeInfo type;
 	GLint location;
+	int tag;
 }
 
 /**
@@ -233,6 +303,7 @@ private TypeInfo toTypeInfo(GLint gl_type)
 {
 	import math.matrix;
 	import graphics.Texture;
+	import graphics.GraphicsState;
 
 	switch(gl_type)
 	{
@@ -281,7 +352,7 @@ private TypeInfo toTypeInfo(GLint gl_type)
 		case GL_DOUBLE_MAT4x2:		return typeid(matrix!(4,2,double));
 		case GL_DOUBLE_MAT4x3:		return typeid(matrix!(4,3,double));
 		
-		case GL_SAMPLER_2D:			return typeid(Texture);
+		case GL_SAMPLER_2D:			return typeid(TextureImageUnit);
 
 		// TODO: Add more smapler types
 

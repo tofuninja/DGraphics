@@ -8,7 +8,7 @@ import graphics.Color;
 import graphics.Image;
 import math.matrix;
 import graphics.render;
-
+import graphics.GraphicsState;
 
 import derelict.glfw3.glfw3;
 import derelict.opengl3.gl3;
@@ -43,7 +43,17 @@ void main(string[] args)
 		import std.exception;
 		enforce(DerelictGL3.loadedVersion >= GLVersion.GL40, "Min Gl version is 4.0");
 		enforce(ARB_program_interface_query, "Requires either ARB_program_interface_query or Gl version 4.3");
+		enforce(ARB_separate_shader_objects, "Requires either ARB_separate_shader_objects or Gl version 4.1");
 	}
+
+
+	// Init Graphics State
+	initializeGraphicsState();
+
+
+
+
+
 
 	// Shader test
 	{

@@ -8,6 +8,8 @@ struct Texture
 	private GLuint id = 0;
 	private bool created = false;
 
+	// TODO: Support other texture types
+	private enum GLenum texType = GL_TEXTURE_2D;
 
 	public this(Image img)
 	{
@@ -66,4 +68,16 @@ struct Texture
 	{
 		return created;
 	}
+
+	/**
+	 * The openGl texture type
+	 */
+	@property public GLenum textureType()
+	{
+		return texType;
+	}
 }
+
+
+
+

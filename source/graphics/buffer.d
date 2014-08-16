@@ -27,12 +27,12 @@ enum bufferUsage
  */
 struct vertexBuffer(T)
 {
-
-	static assert(is(T == struct), "T must be a struct");
 	static assert(__traits(isPOD, T) , "T must be a POD type");
 	private bool created = false;
 	private GLuint id = 0;
 	private int size = 0;
+
+	// TODO: Check if T is actually supported 
 
 	/**
 	 * Sets the contents of the buffer as well as the buffer useage
