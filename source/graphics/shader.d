@@ -297,6 +297,15 @@ public struct shaderUniform
 }
 
 /**
+ * Maps buffers to shader inputs
+ * In openGl this is called a Vertex Array Buffer(VAO)
+ */
+public struct shaderVertexInput
+{
+
+}
+
+/**
  * Converts the type enum returned from openGl program interface query to the type info of the corisponding D type
  */
 private TypeInfo toTypeInfo(GLint gl_type)

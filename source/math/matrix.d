@@ -24,14 +24,6 @@ alias bmat2 = matrix!(2, 2, bool);
 alias bmat3 = matrix!(3, 3, bool);
 alias bmat4 = matrix!(4, 4, bool);
 
-/**
- * Vectors are simply matrices with only 1 column. 
- */
-template vector(int m, T = float)
-{
-	alias vector = matrix!(m,1,T);
-}
-
 alias vec2 = matrix!(2,1);
 alias vec3 = matrix!(3,1);
 alias vec4 = matrix!(4,1);
@@ -71,13 +63,13 @@ struct matrix(int m, int n, T = float)
 {
 	static assert(m > 0,"Row count must be greater than 0");
 	static assert(n > 0,"Column count must be greater than 0");
-
+	
 	public enum rows = m;
 	public enum columns = n;
 	public enum bool isVector = (columns == 1); // Vectors will always be column vectors
 	public enum bool isSquare = (rows == columns);
 	public alias elementType = T;
-
+	
 	static if(isFloatingPoint!T)
 	{
 		public T[m*n] m_data = arrayInit!(m,n,T)(0); // Makes way more sense to init to zero than nan... 
@@ -86,7 +78,7 @@ struct matrix(int m, int n, T = float)
 	{
 		public T[m*n] m_data;
 	}
-
+	
 	// Just some convenience stuff for vectors
 	static if(isVector)
 	{
@@ -115,7 +107,7 @@ struct matrix(int m, int n, T = float)
 			return this[element,0];
 		}
 	}
-
+	
 	public this(T val)
 	{
 		for(int j = 0; j < columns; j++)
@@ -126,7 +118,7 @@ struct matrix(int m, int n, T = float)
 			}
 		}
 	}
-
+	
 	public this(T[rows*columns] arr ...)
 	{
 		int index = 0;
@@ -139,7 +131,7 @@ struct matrix(int m, int n, T = float)
 			}
 		}
 	}
-
+	
 	/// Indexing op
 	ref T opIndex(size_t row, size_t col)
 	{
@@ -149,12 +141,12 @@ struct matrix(int m, int n, T = float)
 		assert(col<columns,"Index out of bounds");
 		return m_data[row + col*rows];
 	}
-
+	
 	/// Negation op
 	auto opUnary(string op : "-")()
 	{
 		static assert(__traits(compiles, -T.init), "opUnary(-) is not defined on " ~ T.stringof);
-
+		
 		matrix!(rows,columns,T) rtn;
 		for(int j = 0; j < columns; j++)
 		{
@@ -163,18 +155,18 @@ struct matrix(int m, int n, T = float)
 				rtn[i,j] = -this[i,j]; // assumes T has a opUnary("-")
 			}
 		}
-
+		
 		return rtn;
 	}
-
+	
 	/// Addition op
 	auto opBinary(string op : "+",T2)(matrix!(rows,columns,T2) rhs) 
 	{
 		static assert(__traits(compiles, T.init + T2.init), "opBinary(+) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
-
+		
 		alias sumT = typeof(T.init + T2.init);
 		matrix!(rows,columns,sumT) rtn;
-
+		
 		for(int j = 0; j < columns; j++)
 		{
 			for(int i = 0; i < rows; i++)
@@ -182,10 +174,10 @@ struct matrix(int m, int n, T = float)
 				rtn[i,j] = this[i,j] + rhs[i,j];
 			}
 		}
-
+		
 		return rtn;
 	}
-
+	
 	/// Subtraction op
 	auto opBinary(string op : "-",T2)(matrix!(rows,columns,T2) rhs) 
 	{
@@ -203,13 +195,13 @@ struct matrix(int m, int n, T = float)
 		
 		return rtn;
 	}
-
+	
 	/// Scalar multiplication op
 	auto opBinary(string op : "*", T2)(T2 rhs) 
 		if(isScalarType!T2)
 	{
 		static assert(__traits(compiles, ((T.init) * (T2.init))), "opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
-
+		
 		alias mulT = typeof(((T.init) * (T2.init)));
 		matrix!(rows,columns,mulT) rtn;
 		
@@ -222,13 +214,13 @@ struct matrix(int m, int n, T = float)
 		}
 		return rtn;
 	}
-
+	
 	/// Scalar multiplication op from the right
 	auto opBinaryRight(string op : "*", T2)(T2 lhs) 
 		if(isScalarType!T2)
 	{
 		static assert(__traits(compiles, ((T2.init) * (T.init))), "opBinary(*) is not defined between " ~ T2.stringof ~ " and " ~ T.stringof);
-
+		
 		alias mulT = typeof(((T2.init) * (T.init)));
 		matrix!(rows,columns,mulT) rtn;
 		
@@ -241,17 +233,52 @@ struct matrix(int m, int n, T = float)
 		}
 		return rtn;
 	}
-
+	
+	
+	/// Scalar division op
+	auto opBinary(string op : "/", T2)(T2 rhs) 
+		if(isScalarType!T2)
+	{
+		static assert(__traits(compiles, ((T.init) / (T2.init))), "opBinary(/) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
+		
+		alias mulT = typeof(((T.init) / (T2.init)));
+		matrix!(rows,columns,mulT) rtn;
+		
+		for(int j = 0; j < columns; j++)
+		{
+			for(int i = 0; i < rows; i++)
+			{
+				rtn[i,j] = this[i,j]/rhs;
+			}
+		}
+		return rtn;
+	}
+	
+	/// Scalar division op from the right
+	auto opBinaryRight(string op : "/", T2)(T2 lhs) 
+		if(isScalarType!T2)
+	{
+		static assert(false, "It does not make sense to divide a scalar by a vector");
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	/// Matrix multiplication op
 	auto opBinary(string op : "*", T2,int rowCount, int colCount)(matrix!(rowCount,colCount,T2) rhs) 
 	{
 		static assert(columns == rowCount,"Left hand matrix's column count must equal right hand matrix's row count.");
 		static assert(__traits(compiles, (T.init) * (T2.init)),"opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
 		static assert(__traits(compiles, ((T.init) * (T2.init)) + ((T.init) * (T2.init))),"opBinary(+) is not defined on " ~ typeof((T.init) * (T2.init)).stringof);
-
+		
 		alias mulT = typeof(((T.init) * (T2.init)) + ((T.init) * (T2.init)));
 		matrix!(rows,colCount,mulT) rtn;
-
+		
 		for(int i = 0; i < rows; i++)
 		{
 			for(int j = 0; j < colCount; j++)
@@ -264,23 +291,23 @@ struct matrix(int m, int n, T = float)
 				rtn[i,j] = sum;
 			}
 		}
-
+		
 		return rtn;
 	}
-
+	
 	/// Matrix concatination, does a horizontal concatination
 	auto opBinary(string op : "~", int m2, int n2)(matrix!(m2,n2,T) rhs) 
 	{
 		return horizontalCat!(m,n,m2,n2,T)(this,rhs);
 	}
-
+	
 	/// Casting op
 	auto opCast(T2 : matrix!(m,n,T2))()
 	{
 		static assert(__traits(compiles, cast(T2)T.init), "No cast from " ~ T.stringof ~ " to " ~ T2.stringof);
-
+		
 		matrix!(m,n,T2) rtn;
-
+		
 		for(int j = 0; j < n; j++)
 		{
 			for(int i = 0; i < m; i++)
@@ -290,7 +317,7 @@ struct matrix(int m, int n, T = float)
 		}
 		return rtn;
 	}
-
+	
 	public string toString()
 	{
 		string s = "[";
@@ -313,7 +340,7 @@ struct matrix(int m, int n, T = float)
 public auto transpose(int m, int n, T)(matrix!(m,n,T) mat)
 {
 	matrix!(n,m,T) rtn;
-
+	
 	for(int i = 0; i < m; i++)
 	{
 		for(int j = 0; j < n; j++)		
@@ -321,7 +348,7 @@ public auto transpose(int m, int n, T)(matrix!(m,n,T) mat)
 			rtn[j,i] = mat[i,j];
 		}
 	}
-
+	
 	return rtn;
 }
 
@@ -335,7 +362,7 @@ public auto dot(int m, T1, T2)(matrix!(m,1,T1) a, matrix!(m,1,T2) b)
 	static assert(a.isVector); // If these fail, something is really wrong...
 	static assert(b.isVector);
 	alias T = typeof(((T1.init) * (T2.init)) + ((T1.init) * (T2.init)));
-
+	
 	T rtn = a[0] * b[0];
 	for(int i = 1; i < m; i++)
 	{
@@ -354,7 +381,7 @@ public auto cross(T1,T2)(matrix!(3,1,T1) a, matrix!(3,1,T2) b)
 	static assert(a.isVector); // If these fail, something is really wrong...
 	static assert(b.isVector);
 	alias T = typeof(((T1.init) * (T2.init)) + ((T1.init) * (T2.init)));
-
+	
 	matrix!(3,1,T) rtn;
 	rtn[0] = a[1]*b[2] - a[2]*b[1];
 	rtn[1] = a[2]*b[0] - a[0]*b[2];
@@ -395,7 +422,7 @@ public auto horizontalCat(int m1, int n1, int m2, int n2, T)(matrix!(m1,n1,T) a,
 	static assert(m1 == m2,"Row count must be equal");
 	alias rtnT = matrix!(m1,n1 + n2,T);
 	rtnT rtn;
-
+	
 	for(int i = 0; i < m1; i++)
 	{
 		for(int j = 0; j < n1; j++)
@@ -403,7 +430,7 @@ public auto horizontalCat(int m1, int n1, int m2, int n2, T)(matrix!(m1,n1,T) a,
 			rtn[i,j] = a[i,j];
 		}
 	}
-
+	
 	for(int i = 0; i < m2; i++)
 	{
 		for(int j = 0; j < n2; j++)
@@ -411,7 +438,7 @@ public auto horizontalCat(int m1, int n1, int m2, int n2, T)(matrix!(m1,n1,T) a,
 			rtn[i,n1 + j] = b[i,j];
 		}
 	}
-
+	
 	return rtn;
 }
 
@@ -458,12 +485,12 @@ public auto invert(int m, int n, T)(matrix!(m,n,T) mat)
 	static assert(mat.isSquare, "Must be a square matrix");
 	static assert(isNumeric!T, "T must be a numeric type");
 	auto reducedAugment = (mat ~ identity!(m,T)).rref();
-
+	
 	// Determin if mat is singular
 	if(reducedAugment[m-1,n-1] != 1) throw new Exception("Matrix is singular");
-
+	
 	matrix!(m,n,reducedAugment.elementType) rtn;
-
+	
 	for(int j = 0; j < n; j++)
 	{
 		for(int i = 0; i < m; i++)
@@ -471,7 +498,7 @@ public auto invert(int m, int n, T)(matrix!(m,n,T) mat)
 			rtn[i,j] = reducedAugment[i,n + j];
 		}
 	}
-
+	
 	return rtn;
 }
 
@@ -493,12 +520,12 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 		alias matT = T;
 		auto augment = mat;
 	}
-
+	
 	static assert(__traits(compiles,(matT.init) - (matT.init)), "binaryOp(-) not defined on " ~ matT.stringof);
 	static assert(__traits(compiles,(matT.init) * (matT.init)), "binaryOp(*) not defined on " ~ matT.stringof);
 	static assert(__traits(compiles,(matT.init) / (matT.init)), "binaryOp(/) not defined on " ~ matT.stringof);
 	static assert(__traits(compiles,(matT.init) > (matT.init)), "opCmp() not defined on " ~ matT.stringof);
-
+	
 	/* using gauss-jordan elimination */
 	int currentRow = 0;
 	for (int j = 0; j < n; j++) 
@@ -506,13 +533,13 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 		if(currentRow == m) break;
 		int temp = currentRow;
 		
-
+		
 		for (int i = currentRow + 1; i < m; i++)
 		{
 			if (augment[i,j] > augment[temp,j]) temp = i;
 		}
 		
-
+		
 		if (temp != currentRow)
 		{
 			for (int k = 0; k < n; k++) 
@@ -548,7 +575,7 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 			currentRow++;
 		}
 	}
-
+	
 	return augment;
 }
 
@@ -569,7 +596,7 @@ auto projection(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded
 	//    0         0    -fn/(f-n)  0
 	//
 	// Make result to be identity first
-
+	
 	// check for bad parameters to avoid divide by zero:
 	// if found, assert and return an identity matrix.
 	assert(fov > 0, "Fov is less than or equals to zero");
@@ -577,11 +604,11 @@ auto projection(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded
 	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
 	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
 	static assert(isNumeric!T, T.stringof ~ " is not numaric");
-
+	
 	auto result = identity!(4,T);
 	T frustumDepth = farDist - nearDist;
 	T oneOverDepth = 1 / frustumDepth;
-
+	
 	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
 	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
 	result[2,2] = (farDist * oneOverDepth);
@@ -592,15 +619,15 @@ auto projection(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded
 }
 
 /// Constructs a quaternion for rotation
-auto quaternion(T=float)(vector!(3,T) axis, T angle)
+auto quaternion(T=float)(matrix!(3,1,T) axis, T angle)
 {
 	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
 	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
 	static assert(isNumeric!T, T.stringof ~ " is not numaric");
-
+	
 	T c = cast(T)cos(angle/2);
 	T s = cast(T)sin(angle/2);
-	return vector!(4,T)(s*axis.x,s*axis.y,s*axis.z,c);
+	return matrix!(4,1,T)(s*axis.x,s*axis.y,s*axis.z,c);
 }
 
 auto length(int m, T)(matrix!(m,1,T) vec)
@@ -615,20 +642,19 @@ auto normalize(int m, T)(matrix!(m,1,T) vec)
 
 /**
  * Constructs a rotation matrix
- * Quaternion to rotation matrix
  */
-auto rotationMatrix(T=float)(vector!(4,T) q)
+auto rotationMatrix(T=float)(matrix!(4, 1,T) q)
 {
 	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
 	static assert(__traits(compiles, cast(T)real.init), "No cast from real to " ~ T.stringof);
 	static assert(isNumeric!T, T.stringof ~ " is not numaric");
-
+	
 	auto result = identity!(4,T);
 	q = normalize(q);
-	alias x = q.x;
-	alias y = q.y;
-	alias z = q.z;
-	alias w = q.w;
+	auto x = q.x;
+	auto y = q.y;
+	auto z = q.z;
+	auto w = q.w;
 	result[0,0] = 1 - 2*y*y - 2*z*z;
 	result[0,1] = 2*x*y - 2*z*w;
 	result[0,2] = 2*x*z + 2*y*w;
@@ -645,9 +671,9 @@ auto rotationMatrix(T=float)(vector!(4,T) q)
  * Constructs a rotation matrix
  * axis+angle to rotation matrix
  */
-auto rotationMatrix(T=float)(vector!(3,T) axis, T angle)
+auto rotationMatrix(T=float)(matrix!(3, 1, T) axis, T angle)
 {
-	return rotation(quaternion(axis, angle));
+	return rotationMatrix(quaternion(axis, angle));
 }
 
 /// Construct a scaling matrix
@@ -732,7 +758,7 @@ private auto arrayInit(int m, int n, T)(T v)
 	T[m*n] rtn;
 	for(int i = 0; i < m*n; i++)
 	{
-			rtn[i] = v;
+		rtn[i] = v;
 	}
 	return rtn;
 }

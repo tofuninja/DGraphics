@@ -61,7 +61,7 @@ struct vertexBuffer(T)
 		}
 
 		size = data.length;
-		glBindBuffer(GL_ARRAY_BUFFER, id);
+		glBindBuffer(GL_ARRAY_BUFFER, id); 
 		glBufferData(GL_ARRAY_BUFFER, data.sizeof, data.ptr, usage);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
