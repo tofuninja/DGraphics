@@ -676,6 +676,15 @@ auto rotationMatrix(T=float)(matrix!(3, 1, T) axis, T angle)
 	return rotationMatrix(quaternion(axis, angle));
 }
 
+/**
+ * Construct a rotation matrix to rotate about an arbitrary axis
+ */
+auto rotationMatrixArbitraryAxis(T=float)(matrix!(3, 1, T) axisStart, matrix!(3, 1, T) axisEnd, T angle)
+{
+	auto axis = axisEnd-axisStart;
+	return translationMatrix(axisStart)*rotationMatrix(axis,angle)*translationMatrix(-axisStart);
+}
+
 /// Construct a scaling matrix
 auto scalingMatrix(T=float)(T x, T y, T z)
 {
