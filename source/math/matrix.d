@@ -815,42 +815,6 @@ auto translationMatrix(T=float)(vector!(3,T) v)
 	return r;
 }
 
-/// Rotates a transformation matrix by a quaternion
-auto rotate(T=float)(matrix!(4,4,T) m,vector!(4,T) q)
-{
-	return m*rotationMatrix(q);
-}
-
-/// Rotates a transformation matrix around an axis
-auto rotate(T=float)(matrix!(4,4,T) m,vector!(3,T) axis, T angle)
-{
-	return m*rotationMatrix(quaternion(axis,angle));
-}
-
-/// Translates a transformation matrix
-auto translate(T=float)(matrix!(4,4,T) m, T x, T y, T z)
-{
-	return m*translationMatrix(x,y,z);
-}
-
-/// Translates a transformation matrix
-auto translate(T=float)(matrix!(4,4,T) m, vector!(3,T) v)
-{
-	return m*translationMatrix(v);
-}
-
-/// Scale a transformation matrix
-auto scale(T=float)(matrix!(4,4,T) m, T x, T y, T z)
-{
-	return m*scalingMatrix(x,y,z);
-}
-
-/// Scale a transformation matrix
-auto scale(T=float)(matrix!(4,4,T) m, vector!(3,T) v)
-{
-	return m*scalingMatrix(v);
-}
-
 // just some trash...
 private auto arrayInit(int m, int n, T)(T v)
 {
