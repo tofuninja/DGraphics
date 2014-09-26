@@ -8,7 +8,7 @@ import graphics.Image;
 
 public struct model
 {
-	// Rotation and translation are both handeled by the model matrix
+	// Rotation, translation and scaling are all handeled by the model matrix
 	public mat4 modelMatrix;
 	public mesh meshData;
 
@@ -24,6 +24,9 @@ public class mesh
 	private vec3[] vectors;
 	private Color[] colors;
 	private ivec3[] indices;
+	private vec3 lowerBound;
+	private vec3 upperBound;
+	private vec3 center;
 
 	this(vec3[] vecs, ivec3[] index)
 	{
@@ -36,9 +39,31 @@ public class mesh
 		indices = index;
 		colors = new Color[vecs.length];
 		colors[] = c;
+		calcBounds();
+	}
+
+	private void calcBounds()
+	{
+		import std.algorithm;
+		lowerBound = vectors[0];
+		upperBound = vectors[0];
+		foreach(vec3 v; vectors)
+		{
+			lowerBound.x = min(lowerBound.x, v.x);
+			lowerBound.y = min(lowerBound.y, v.y);
+			lowerBound.z = min(lowerBound.z, v.z);
+			upperBound.x = max(upperBound.x, v.x);
+			upperBound.y = max(upperBound.y, v.y);
+			upperBound.z = max(upperBound.z, v.z);
+		}
+
+		center = (upperBound - lowerBound)/2.0f;
 	}
 }
 
+/**
+ * Cunstruct an axis aligned box
+ */
 public mesh boxMesh()
 {
 	vec3[] vecs = new vec3[8];
@@ -112,7 +137,7 @@ public void drawWireModel(Image img, model m, camera c)
 	}
 }
 
-public void setModelMatrix(model m,vec3 translation, vec3 rotation, vec3 scale)
+public void setModelMatrix(ref model m,vec3 translation, vec3 rotation, vec3 scale)
 {
 	m.modelMatrix = translationMatrix(translation)*rotationMatrix(rotation)*scalingMatrix(scale);
 }

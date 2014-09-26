@@ -818,7 +818,7 @@ auto translationMatrix(T=float)(T x, T y, T z)
 }
 
 /// Constructs a translation matrix
-auto translationMatrix(T=float)(vector!(3,T) v)
+auto translationMatrix(T=float)(matrix!(3,1,T) v)
 {
 	auto r = identity!(4, T);
 	r[0,3] = v.x;
