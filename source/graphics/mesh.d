@@ -8,6 +8,7 @@ import graphics.Image;
 
 public struct model
 {
+	// Rotation and translation are both handeled by the model matrix
 	public mat4 modelMatrix;
 	public mesh meshData;
 
@@ -109,4 +110,9 @@ public void drawWireModel(Image img, model m, camera c)
 		plotLine(p1,p2,m.meshData.colors[tri[1]]);
 		plotLine(p2,p0,m.meshData.colors[tri[2]]);
 	}
+}
+
+public void setModelMatrix(model m,vec3 translation, vec3 rotation, vec3 scale)
+{
+	m.modelMatrix = translationMatrix(translation)*rotationMatrix(rotation)*scalingMatrix(scale);
 }
