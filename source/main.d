@@ -3,75 +3,46 @@
 import std.stdio;
 import std.string;
 
+pragma(lib, "Comdlg32.lib");
+
+import math.matrix;
 
 import graphics.Color;
 import graphics.Image;
-import math.matrix;
 import graphics.render;
 import graphics.GraphicsState;
 
+import gui.Panel;
+import gui.Font;
+
 import derelict.glfw3.glfw3;
 import derelict.opengl3.gl3;
+import derelict.opengl3.gl;
 import derelict.freeimage.freeimage;
+
+
 
 void main(string[] args)
 {
-	/* Initialize the librarys */
-	DerelictGL3.load();
-	DerelictGLFW3.load();
-	DerelictFI.load();
-
-
-
-
-
-
-	if (!glfwInit()) return;
-
-	// Create a windowed mode window and its OpenGL context 
-	GLFWwindow* window;
-	window = glfwCreateWindow(640, 480, "Hello World", null, null);
-	scope(exit) glfwTerminate();
-	if (!window) return;
-	glfwMakeContextCurrent(window);
-	DerelictGL3.reload();
-
-	writeln("OpenGl Version:", DerelictGL3.loadedVersion);
-
-	// Enforce required gl
-	{
-		import std.exception;
-		enforce(DerelictGL3.loadedVersion >= GLVersion.GL40, "Min Gl version is 4.0");
-		enforce(ARB_program_interface_query, "Requires either ARB_program_interface_query or Gl version 4.3");
-		enforce(ARB_separate_shader_objects, "Requires either ARB_separate_shader_objects or Gl version 4.1");
-	}
-
-
 	// Init Graphics State
 	initializeGraphicsState();
 
 
+	new testPan(vec2(0,0),vec2(500,500),basePan);
 
-
-
-
-	// Shader test
-	{
-		import graphics.shader;
-		auto prog = shaderProgram(shader(vsSource, shaderStage.vertex), shader(fsSource, shaderStage.fragment));
-
-
-		writeln(prog.uniforms);
-	}
-
-
-
-
+	glRasterPos2f(-1,1);
+	glPixelZoom(1,-1);
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(1,1,1,1);
 	// Loop until the user closes the window 
 	while (!glfwWindowShouldClose(window))
 	{
 		// Render here 
-
+		glClear(GL_COLOR_BUFFER_BIT);
+		basePan.featchMouse(window);
+		basePan.sendTick();
+		basePan.composit();
 		// Swap front and back buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -79,35 +50,31 @@ void main(string[] args)
 }
 
 
+class testPan : Panel
+{
+	import graphics.camera;	
+	import graphics.mesh;
 
-string vsSource = 
-q{
-#version 330
-	
-	uniform mat4 mvpHAHA;
+	camera cam;
+	model m;
+	int time = 0;
 
-	uniform float otherUni;
-
-	layout(location = 0) in vec4 pos;
-	layout(location = 1) in vec4 col;
-	out vec4 color;
-	
-	void main()
+	public this(vec2 loc, vec2 size, Panel owner)
 	{
-		gl_Position = mvpHAHA*pos;
-		color = col*otherUni;
-	}
-	
-};
+		import math.conversion;
+		cam = camera(toRad(60), size.x/size.y);
+		m = model(boxMesh);
 
-string fsSource = 
-q{
-#version 330
-	in vec4 color;
-	out vec4 fragColor;
-	void main()
-	{
-		fragColor = color;
+		super(loc, size, owner);
 	}
-	
-};
+
+	override public void tick() 
+	{
+		import math.conversion;
+		img.clear(Color(0,0,0,255));
+		m.modelMatrix = translationMatrix(0,0,-60)*rotationMatrix(vec3(0,1,0), toRad(time))*scalingMatrix(vec3(5,5,5));
+		img.drawWireModel(m, cam);
+		time ++;
+	}
+}
+
