@@ -12,12 +12,6 @@ public void setUpKeyboard()
 
 extern(C) void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods) nothrow
 {
-	try
-	{
-		import std.stdio;
-		writeln(key);
-	}
-	catch(Exception){}
 	if(key >= 0 && key <= GLFW_KEY_LAST)
 	{
 		if(action == GLFW_PRESS)
