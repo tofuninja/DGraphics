@@ -106,6 +106,88 @@ struct matrix(int m, int n, T = float)
 		{
 			return this[element,0];
 		}
+
+		// Swizzle
+		auto opDispatch(string s)()
+		{
+			static assert(s.length <= rows, "Swizzel mask too long");
+			enum int l = s.length;
+			
+			T grab(char c)()
+			{
+				static if(c == 'x' && rows >= 1) return this[0,0];
+				static if(c == 'y' && rows >= 2) return this[1,0];
+				static if(c == 'z' && rows >= 3) return this[2,0];
+				static if(c == 'w' && rows >= 4) return this[3,0];
+				
+				static if(c != 'x' && c != 'y' && c != 'z' && c != 'w')
+				{
+					static assert(false, "Non Valid swizzel");
+					return T.init;
+				}
+			}
+
+			static if(l == 4)
+			{
+				return matrix!(4,1,T)(grab!(s[0]), grab!(s[1]), grab!(s[2]), grab!(s[3]));
+			}
+			static if(l == 3)
+			{
+				return matrix!(3,1,T)(grab!(s[0]), grab!(s[1]), grab!(s[2]));
+			}
+			static if(l == 2)
+			{
+				return matrix!(2,1,T)(grab!(s[0]), grab!(s[1]));
+			}
+			/*
+			static if(l == 1)
+			{
+				return matrix!(4,1,T)(grab!(s[0]), grab!(s[1]), grab!(s[2]), grab!(s[3]));
+			}*/
+		}
+
+		auto opDispatch(string s, int l)(matrix!(l,1,T) v)
+		{
+			static assert(s.length <= 4, "Swizzel mask too long");
+			static assert(s.length == l, "Swizzel and vector size dont match");
+
+			void place(char c)(T i)
+			{
+				static if(c == 'x' && rows >= 1) this[0,0] = i;
+				static if(c == 'y' && rows >= 2) this[1,0] = i;
+				static if(c == 'z' && rows >= 3) this[2,0] = i;
+				static if(c == 'w' && rows >= 4) this[3,0] = i;
+				
+				static if(c != 'x' && c != 'y' && c != 'z' && c != 'w')
+				{
+					static assert(false, "Non Valid swizzel");
+				}
+			}
+
+			static if(l == 4)
+			{
+				place!(s[0])(v[0,0]);
+				place!(s[1])(v[1,0]);
+				place!(s[2])(v[2,0]);
+				place!(s[3])(v[3,0]);
+			}
+			static if(l == 3)
+			{
+				place!(s[0])(v[0,0]);
+				place!(s[1])(v[1,0]);
+				place!(s[2])(v[2,0]);
+			}
+			static if(l == 2)
+			{
+				place!(s[0])(v[0,0]);
+				place!(s[1])(v[1,0]);
+			}
+			/*
+			static if(l == 1)
+			{
+				return matrix!(4,1,T)(grab!(s[0]), grab!(s[1]), grab!(s[2]), grab!(s[3]));
+			}*/
+		}
 	}
 	
 	public this(T val)
@@ -260,39 +342,47 @@ struct matrix(int m, int n, T = float)
 	{
 		static assert(false, "It does not make sense to divide a scalar by a vector");
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	/// Matrix multiplication op
 	auto opBinary(string op : "*", T2,int rowCount, int colCount)(matrix!(rowCount,colCount,T2) rhs) 
 	{
-		static assert(columns == rowCount,"Left hand matrix's column count must equal right hand matrix's row count.");
-		static assert(__traits(compiles, (T.init) * (T2.init)),"opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
-		static assert(__traits(compiles, ((T.init) * (T2.init)) + ((T.init) * (T2.init))),"opBinary(+) is not defined on " ~ typeof((T.init) * (T2.init)).stringof);
-		
-		alias mulT = typeof(((T.init) * (T2.init)) + ((T.init) * (T2.init)));
-		matrix!(rows,colCount,mulT) rtn;
-		
-		for(int i = 0; i < rows; i++)
+		static if(isVector && rhs.isVector && rows == rhs.rows)
 		{
-			for(int j = 0; j < colCount; j++)
+			// Convinence for multiplying vectors
+			static assert(__traits(compiles, (T.init) * (T2.init)),"opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
+			alias mulT = typeof((T.init) * (T2.init));
+			matrix!(rows,1,mulT) rtn;
+			for(int i = 0; i < rows; i++)
 			{
-				mulT sum = this[i,0]*rhs[0,j];
-				for(int k = 1; k < columns; k++)
-				{
-					sum += this[i,k]*rhs[k,j];
-				}
-				rtn[i,j] = sum;
+				rtn[i] = this[i] * rhs[i];
 			}
+			return rtn;
 		}
-		
-		return rtn;
+		else
+		{	
+			// Normal matrix multiplication 
+			static assert(columns == rowCount,"Left hand matrix's column count must equal right hand matrix's row count.");
+			static assert(__traits(compiles, (T.init) * (T2.init)),"opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
+			static assert(__traits(compiles, ((T.init) * (T2.init)) + ((T.init) * (T2.init))),"opBinary(+) is not defined on " ~ typeof((T.init) * (T2.init)).stringof);
+			
+			alias mulT = typeof(((T.init) * (T2.init)) + ((T.init) * (T2.init)));
+			matrix!(rows,colCount,mulT) rtn;
+			
+			for(int i = 0; i < rows; i++)
+			{
+				for(int j = 0; j < colCount; j++)
+				{
+					mulT sum = this[i,0]*rhs[0,j];
+					for(int k = 1; k < columns; k++)
+					{
+						sum += this[i,k]*rhs[k,j];
+					}
+					rtn[i,j] = sum;
+				}
+			}
+			
+			return rtn;
+		}
 	}
 	
 	/// Matrix concatination, does a horizontal concatination
@@ -582,7 +672,7 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 /**
  * Constructs a 3d projection matrix
  */
-auto projection(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=true)
+auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=false)
 {
 	//
 	// General form of the Projection Matrix
@@ -696,7 +786,7 @@ auto scalingMatrix(T=float)(T x, T y, T z)
 }
 
 /// Construct a scaling matrix
-auto scalingMatrix(T=float)(vector!(3,T) v)
+auto scalingMatrix(T=float)(matrix!(3,1,T) v)
 {
 	auto r = identity!(4, T);
 	r[0,0] = v.x;
