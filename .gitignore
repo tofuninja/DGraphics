@@ -6,3 +6,4 @@ bin/dgraphics.exe
 bin/formatedTrace.txt
 bin/trace.def
 bin/trace.log
+dub.userprefs
