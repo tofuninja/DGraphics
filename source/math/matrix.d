@@ -708,6 +708,33 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
 	return result;
 }
 
+/**
+ * Constructs a view matrix
+ */
+mat4 viewMatrix(T=float)(matrix!(3,1,T) eye, matrix!(3,1,T) target, matrix!(3,1,T) up )
+{
+	auto zaxis = normalize(eye - target);		// The "forward" vector.
+	auto xaxis = normalize(cross(up, zaxis));	// The "right" vector.
+	auto yaxis = cross(zaxis, xaxis);			// The "up" vector.
+	
+	// Create a 4x4 view matrix from the right, up, forward and eye position vectors
+	auto viewMatrix = identity!(4,T);
+	viewMatrix[0,0] = xaxis.x;
+	viewMatrix[1,0] = yaxis.x;
+	viewMatrix[2,0] = zaxis.x;
+	viewMatrix[0,1] = xaxis.y;
+	viewMatrix[1,1] = yaxis.y;
+	viewMatrix[2,1] = zaxis.y;
+	viewMatrix[0,2] = xaxis.z;
+	viewMatrix[1,2] = yaxis.z;
+	viewMatrix[2,2] = zaxis.z;
+	viewMatrix[0,3] = -dot( xaxis, eye );
+	viewMatrix[1,3] = -dot( yaxis, eye );
+	viewMatrix[2,3] = -dot( zaxis, eye );
+	
+	return viewMatrix;
+}
+
 /// Constructs a quaternion for rotation
 auto quaternion(T=float)(matrix!(3,1,T) axis, T angle)
 {
