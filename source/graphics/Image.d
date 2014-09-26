@@ -5,8 +5,8 @@ import math.matrix;
 
 struct Image
 {
-	private int m_width;
-	private int m_height;
+	private int m_width = 0;
+	private int m_height = 0;
 	private Color[] m_data;
 
 	this(int width, int height)
@@ -20,39 +20,42 @@ struct Image
 	@property int Height()  { return m_height; }
 	@property Color[] Data()  { return m_data; }
 
-	Color opIndex(int x, int y)
+	ref Color opIndex(int x, int y)
 	{
-		if(x<0 || y<0 || x>=m_width || y>=m_height) return Color(0); // Silently fail... 
+		static Color failRtn = Color(0);
+		if(x<0 || y<0 || x>=m_width || y>=m_height) 
+		{
+			failRtn = Color(0);
+			return failRtn; // Silently fail... 
+		}
 		return m_data[x + y*m_width];
 	}
 
-	Color opIndexAssign(Color c, int x, int y)
-	{
-		if(x>=0 && y>=0 && x<m_width && y<m_height) m_data[x + y*m_width] = c; // Silently fail... 
-		return c;
-	}
-
-	Color opIndex(ivec2 index)
+	ref opIndex(ivec2 index)
 	{
 		return opIndex(index.x,index.y);
 	}
-	
-	Color opIndexAssign(Color c, ivec2 index)
-	{
-		return opIndexAssign(c, index.x, index.y);
-	}
 
-
-	Color opIndex(vec2 index)
+	ref Color opIndex(vec2 index)
 	{
 		return opIndex(cast(int)index.x,cast(int)index.y);
 	}
-	
-	Color opIndexAssign(Color c, vec2 index)
+
+	public Image dup()
 	{
-		return opIndexAssign(c, cast(int)index.x, cast(int)index.y);
+		Image rtn;
+		rtn.m_width = m_width;
+		rtn.m_height = m_height;
+		rtn.m_data = m_data.dup;
+		return rtn;
+	}
+
+	public ref Color pixel(int x, int y)
+	{
+		return m_data[x + y*m_width];
 	}
 }
+
 
 /** 
  * Save Image to file
@@ -182,4 +185,120 @@ Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dst
 	FreeImage_Unload(img);
 
 	return rtn;
+}
+
+void clear(Image img, Color c)
+{
+	import std.stdio;
+	for(int i = 0; i < img.Width; i++)
+	{
+		for(int j = 0; j < img.Height; j++)
+		{
+			img[i, j] = c;
+		}
+	}
+}
+
+Image convolve(int n)(Image img, matrix!(n,n, float) kernal)
+{
+	static assert(n % 2 == 1, "Kernal Matrix must be square and have an odd size");
+	
+	Image cpy = Image(img.Width, img.Height);
+
+	for(int i = n/2; i < img.Width - n/2; i++)
+	{
+		for(int j = n/2; j < img.Height - n/2; j++)
+		{
+			
+			vec4 sum = vec4(0,0,0,0);
+			
+			for(int k = 0; k < n; k++)
+			{
+				for(int l = 0; l < n; l++)
+				{
+					Color c = img[i + k - n/2, j + l - n/2];
+					sum = sum + c.to!vec4 * kernal[k,l];
+				}
+			}
+			cpy[i,j] = sum.to!Color;
+			cpy[i,j].A = 255;
+		}
+	}
+	return cpy;
+}
+
+
+bool loadImageDialog(ref Image img)
+{
+	import core.sys.windows.windows;
+	import std.string;
+
+	int rtn;
+	OPENFILENAMEA file;
+	
+	file.lStructSize = OPENFILENAMEA.sizeof;
+	file.hwndOwner = null;
+	file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
+	file.lpstrCustomFilter = null;
+	file.nFilterIndex = 1;
+	char[1000] buffer;
+	buffer[0] = 0;
+	file.lpstrFile = buffer.ptr;
+	file.nMaxFile = 1000;
+	file.nMaxFileTitle = 0;
+	file.lpstrInitialDir = null;
+	file.lpstrTitle = null;
+	file.Flags = 0;
+	
+	rtn = GetOpenFileNameA(&file);
+	if(rtn == 0) return false;
+	
+	int z;
+	for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
+	string filename = buffer[0 .. z].idup;
+	img = loadImage(filename);
+	return true;
+}
+
+bool saveImageDialog(Image img)
+{
+	import core.sys.windows.windows;
+	import std.string;
+
+	int rtn;
+	OPENFILENAMEA file;
+	
+	file.lStructSize = OPENFILENAMEA.sizeof;
+	file.hwndOwner = null;
+	file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
+	file.lpstrCustomFilter = null;
+	file.nFilterIndex = 1;
+	char[1000] buffer;
+	buffer[0] = 0;
+	file.lpstrFile = buffer.ptr;
+	file.nMaxFile = 1000;
+	file.nMaxFileTitle = 0;
+	file.lpstrInitialDir = null;
+	file.lpstrTitle = null;
+	file.Flags = 0;
+	
+	rtn = GetSaveFileNameA(&file);
+	if(rtn == 0) return false;
+	
+	int z;
+	for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
+	string filename = buffer[0 .. z].idup;
+	saveImage(img, filename);
+	return true;
+}
+
+void drawImage(Image dest, Image src, vec2 loc)
+{
+	for(int i = 0; i < src.Width; i++)
+	{
+		for(int j = 0; j < src.Height; j++)
+		{
+			dest[cast(int)loc.x + i, cast(int)loc.y + j] = alphaBlend(src[i,j],dest[cast(int)loc.x + i, cast(int)loc.y + j]);
+		}
+	}
 }
