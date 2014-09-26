@@ -1,5 +1,7 @@
 ﻿module graphics.Color;
 
+import math.matrix;
+
 struct Color
 {
 	this(uint rgba)
@@ -51,11 +53,32 @@ struct Color
 	public alias Alpha = m_Alpha;
 
 	public alias RGBA = m_RGBA;
+
 }
 
-/*
-public Color alphaBlend(Color A, Color B)
+public Color alphaBlend(Color fg, Color bg)
 {
-
+	Color rtn;
+    uint alpha = fg.A + 1;
+    uint inv_alpha = 256 - fg.A;
+    rtn.R = cast(ubyte)((alpha * fg.R + inv_alpha * bg.R) >> 8);
+	rtn.G = cast(ubyte)((alpha * fg.G + inv_alpha * bg.G) >> 8);
+	rtn.B = cast(ubyte)((alpha * fg.B + inv_alpha * bg.B) >> 8);
+	rtn.A = 255;
+	return rtn;
 }
-*/
+
+vec4 to(T: vec4)(Color c)
+{
+	return vec4(c.R, c.G, c.B, c.A);
+}
+
+Color to(T: Color)(vec4 c)
+{
+	foreach(ref float f; c.m_data)
+	{
+		if(f > 255) f = 255;
+		if(f < 0) f = 0;
+	}
+	return Color(cast(ubyte)c.x, cast(ubyte)c.y, cast(ubyte)c.z, cast(ubyte)c.w);
+}
