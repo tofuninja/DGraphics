@@ -1,3 +1,5 @@
 bin/dgraphics.exe
 .dub/build/application-debug-windows-x86-dmd-050003BAEC5754FBB5AA78E74030635C/dgraphics.exe
 .dub/build/application-debug-windows-x86-dmd-050003BAEC5754FBB5AA78E74030635C/dgraphics.obj
+*.obj
+*.exe
