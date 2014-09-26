@@ -767,6 +767,18 @@ auto rotationMatrix(T=float)(matrix!(3, 1, T) axis, T angle)
 }
 
 /**
+ * Constructs a rotation matrix from yaw, pitch, roll
+ * vec3(yaw, pitch, roll)
+ */
+auto rotationMatrix(T=float)(matrix!(3, 1, T) ypr)
+{
+	return 
+		rotationMatrix(matrix!(3, 1, T)(0,0,1),ypr.x)* // Yaw
+		rotationMatrix(matrix!(3, 1, T)(0,1,0),ypr.y)* // Pitch
+		rotationMatrix(matrix!(3, 1, T)(1,0,0),ypr.z); // Roll
+}
+
+/**
  * Construct a rotation matrix to rotate about an arbitrary axis
  */
 auto rotationMatrixArbitraryAxis(T=float)(matrix!(3, 1, T) axisStart, matrix!(3, 1, T) axisEnd, T angle)
@@ -813,6 +825,19 @@ auto translationMatrix(T=float)(vector!(3,T) v)
 	r[1,3] = v.y;
 	r[2,3] = v.z;
 	return r;
+}
+
+void prettyPrint(int m, int n, T)(matrix!(m,n,T) mat)
+{
+	import std.stdio;
+	for(int i = 0; i < m; i++)
+	{
+		for(int j = 0; j < n; j++)
+		{
+			writef("%8s  ", mat[i,j]);
+		}
+		write("\n");
+	}
 }
 
 // just some trash...
