@@ -1,15 +1,14 @@
 ﻿<Properties GitUserInfo="UsingGIT">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Default" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="source\graphics\shader.d">
+  <MonoDevelop.Ide.Workbench ActiveDocument="dub.json">
     <Files>
-      <File FileName="source\main.d" Line="61" Column="107" />
-      <File FileName="source\math\matrix.d" Line="17" Column="34" />
-      <File FileName="source\graphics\Image.d" Line="1" Column="1" />
-      <File FileName="source\graphics\Color.d" Line="1" Column="1" />
-      <File FileName="source\graphics\buffer.d" Line="96" Column="3" />
-      <File FileName="source\graphics\shader.d" Line="283" Column="3" />
-      <File FileName="source\graphics\Texture.d" Line="11" Column="2" />
-      <File FileName="source\graphics\GraphicsState.d" Line="72" Column="45" />
+      <File FileName="source\main.d" Line="1" Column="1" />
+      <File FileName="source\math\matrix.d" Line="1" Column="1" />
+      <File FileName="source\gui\Panel.d" Line="1" Column="1" />
+      <File FileName="source\graphics\mesh.d" Line="1" Column="1" />
+      <File FileName="source\graphics\camera.d" Line="1" Column="1" />
+      <File FileName="source\gui\apps\tetris.d" Line="1" Column="1" />
+      <File FileName="dub.json" Line="8" Column="18" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

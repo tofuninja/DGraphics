@@ -4,6 +4,7 @@
 	"copyright": "Copyright © 2014, snuffy",
 	"authors": ["Snuffy"],
 	"targetPath" : "$PACKAGE_DIR/bin",
+	"buildOptions" : ["warningsAsErrors"],
 	"dependencies": 
 	{
 		"derelict-glfw3": ">=1.0.0",
@@ -11,5 +12,6 @@
 		"derelict-fi": "~master",
 		"pegged": "~master" 
 	}
+
 }
  
