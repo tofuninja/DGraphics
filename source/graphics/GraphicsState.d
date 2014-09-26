@@ -7,6 +7,7 @@ import derelict.opengl3.gl;
 import derelict.freeimage.freeimage;
 import std.stdio; 
 import gui.Panel;
+import gui.keyboard;
 
 // State
 private int texUnitCount;
@@ -41,6 +42,8 @@ public void initializeGraphicsState()
 	DerelictGL.reload();
 
 	debug writeln("OpenGl Version:", DerelictGL3.loadedVersion);
+	setUpKeyboard();
+
 	/*
 	// Enforce required gl
 	{
