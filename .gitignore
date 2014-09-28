@@ -7,3 +7,4 @@ bin/formatedTrace.txt
 bin/trace.def
 bin/trace.log
 dub.userprefs
+*.lib
