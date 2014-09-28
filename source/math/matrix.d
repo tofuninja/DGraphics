@@ -188,6 +188,17 @@ struct matrix(int m, int n, T = float)
 				return matrix!(4,1,T)(grab!(s[0]), grab!(s[1]), grab!(s[2]), grab!(s[3]));
 			}*/
 		}
+
+		/// Vector division op
+		auto opBinary(string op : "/", T2,int rowCount)(matrix!(rowCount,1,T2) rhs) 
+		{
+			static assert(isVector && rhs.isVector && rows == rhs.rows, "opBinary(/) not defined");
+			static assert(__traits(compiles, (T.init) / (T2.init)),"opBinary(/) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
+			alias mulT = typeof((T.init) / (T2.init));
+			matrix!(rows,1,mulT) rtn;
+			rtn.m_data[] = m_data[] / rhs.m_data[];
+			return rtn;
+		}
 	}
 	
 	public this(T val)
@@ -230,14 +241,7 @@ struct matrix(int m, int n, T = float)
 		static assert(__traits(compiles, -T.init), "opUnary(-) is not defined on " ~ T.stringof);
 		
 		matrix!(rows,columns,T) rtn;
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = -this[i,j]; // assumes T has a opUnary("-")
-			}
-		}
-		
+		rtn.m_data[] = -m_data[];
 		return rtn;
 	}
 	
@@ -249,13 +253,7 @@ struct matrix(int m, int n, T = float)
 		alias sumT = typeof(T.init + T2.init);
 		matrix!(rows,columns,sumT) rtn;
 		
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = this[i,j] + rhs[i,j];
-			}
-		}
+		rtn.m_data[] = m_data[] + rhs.m_data[];
 		
 		return rtn;
 	}
@@ -267,13 +265,7 @@ struct matrix(int m, int n, T = float)
 		alias difT = typeof(T.init - T2.init);
 		matrix!(rows,columns,difT) rtn;
 		
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = this[i,j] - rhs[i,j];
-			}
-		}
+		rtn.m_data[] = m_data[] - rhs.m_data[];
 		
 		return rtn;
 	}
@@ -286,14 +278,7 @@ struct matrix(int m, int n, T = float)
 		
 		alias mulT = typeof(((T.init) * (T2.init)));
 		matrix!(rows,columns,mulT) rtn;
-		
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = this[i,j]*rhs;
-			}
-		}
+		rtn.m_data[] = m_data[] * rhs;
 		return rtn;
 	}
 	
@@ -306,13 +291,7 @@ struct matrix(int m, int n, T = float)
 		alias mulT = typeof(((T2.init) * (T.init)));
 		matrix!(rows,columns,mulT) rtn;
 		
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = lhs*this[i,j];
-			}
-		}
+		rtn.m_data[] = lhs*m_data[];
 		return rtn;
 	}
 	
@@ -325,14 +304,7 @@ struct matrix(int m, int n, T = float)
 		
 		alias mulT = typeof(((T.init) / (T2.init)));
 		matrix!(rows,columns,mulT) rtn;
-		
-		for(int j = 0; j < columns; j++)
-		{
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i,j] = this[i,j]/rhs;
-			}
-		}
+		rtn.m_data[] = m_data[] / rhs;
 		return rtn;
 	}
 	
@@ -352,10 +324,7 @@ struct matrix(int m, int n, T = float)
 			static assert(__traits(compiles, (T.init) * (T2.init)),"opBinary(*) is not defined between " ~ T.stringof ~ " and " ~ T2.stringof);
 			alias mulT = typeof((T.init) * (T2.init));
 			matrix!(rows,1,mulT) rtn;
-			for(int i = 0; i < rows; i++)
-			{
-				rtn[i] = this[i] * rhs[i];
-			}
+			rtn.m_data[] = m_data[] * rhs.m_data[];
 			return rtn;
 		}
 		else
@@ -384,7 +353,8 @@ struct matrix(int m, int n, T = float)
 			return rtn;
 		}
 	}
-	
+
+
 	/// Matrix concatination, does a horizontal concatination
 	auto opBinary(string op : "~", int m2, int n2)(matrix!(m2,n2,T) rhs) 
 	{
@@ -570,10 +540,12 @@ public auto verticalCat(int m1, int n1, int m2, int n2, T)(matrix!(m1,n1,T) a, m
  * T must be a built in numeric type as '1' must be know for
  * identity.
  */
-public auto invert(int m, int n, T)(matrix!(m,n,T) mat)
+public auto invert(int matR, int matC, T)(matrix!(matR,matC,T) mat)
 {
 	static assert(mat.isSquare, "Must be a square matrix");
 	static assert(isNumeric!T, "T must be a numeric type");
+
+	/*
 	auto reducedAugment = (mat ~ identity!(m,T)).rref();
 	
 	// Determin if mat is singular
@@ -590,6 +562,86 @@ public auto invert(int m, int n, T)(matrix!(m,n,T) mat)
 	}
 	
 	return rtn;
+	*/
+	import std.exception;
+	enum f = matR;
+	matrix!(f - 1,f - 1,T) b;
+	matrix!(f,f,T) fac;
+
+	T d = determinant(mat);
+	enforce(d != 0, "Matrix is singular");
+	
+	for(int q = 0; q < f; q++)
+	{
+		for(int p = 0; p < f; p++)
+		{
+			int m=0;
+			int n=0;
+			for (int i = 0; i < f; i++)
+			{
+				for (int j = 0; j < f; j++)
+				{
+					if (i != q && j != p)
+					{
+						b[m,n] = mat[i,j];
+						if (n < (f - 2)) n++; 
+						else
+						{
+							n=0;
+							m++;
+						}
+					}
+				}
+			}
+			fac[p, q] = pow(-1,q + p) * determinant(b);
+		}
+	}
+	return fac/d;
+}
+
+/**
+ * Calculates the determinant of a matrix
+ */
+auto determinant(int matR, int matC, T)(matrix!(matR,matC,T) a)
+{
+	static assert(a.isSquare, "Must be a square matrix");
+	static assert(isNumeric!T, "T must be a numeric type");
+	enum k = matR;
+
+	static if(k==1)
+	{
+		return (a[0,0]);
+	}
+	else
+	{
+		T s=1;
+		T det=0;
+		for (int c = 0; c < k; c++)
+		{
+			int m = 0;
+			int n = 0;
+			matrix!(k - 1,k -1,T) b;
+			for(int i = 0; i < k; i++)
+			{
+				for(int j = 0; j < k; j++)
+				{
+					if (i != 0 && j != c)
+					{
+						b[m,n] = a[i,j];
+						if (n < (k - 2)) n++;
+						else
+						{
+							n=0;
+							m++;
+						}
+					}
+				}
+			}
+			det = det + s * (a[0,c] * determinant(b));
+			s = -1 * s;
+		}
+		return det;
+	}
 }
 
 /**
@@ -670,7 +722,7 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 }
 
 /**
- * Constructs a 3d projection matrix
+ * Constructs a 3d perspective projection matrix
  */
 auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=false)
 {
@@ -685,8 +737,6 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
 	//    0         0      f/(f-n)  1
 	//    0         0    -fn/(f-n)  0
 	//
-	// Make result to be identity first
-	
 	// check for bad parameters to avoid divide by zero:
 	// if found, assert and return an identity matrix.
 	assert(fov > 0, "Fov is less than or equals to zero");
@@ -698,13 +748,22 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
 	auto result = identity!(4,T);
 	T frustumDepth = farDist - nearDist;
 	T oneOverDepth = 1 / frustumDepth;
-	
+	/*
 	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
 	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
 	result[2,2] = (farDist * oneOverDepth);
 	result[3,2] = ((-farDist * nearDist) * oneOverDepth);
 	result[2,3] = 1;
 	result[3,3] = 0;
+	*/
+
+	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
+	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
+	result[2,2] = -((farDist + nearDist) * oneOverDepth);
+	result[2,3] = ((2*farDist * nearDist) * oneOverDepth);
+	result[3,2] = 1;
+	result[3,3] = 0;
+
 	return result;
 }
 
@@ -800,9 +859,9 @@ auto rotationMatrix(T=float)(matrix!(3, 1, T) axis, T angle)
 auto rotationMatrix(T=float)(matrix!(3, 1, T) ypr)
 {
 	return 
-		rotationMatrix(matrix!(3, 1, T)(0,0,1),ypr.x)* // Yaw
+		rotationMatrix(matrix!(3, 1, T)(0,0,1),ypr.z)* // Yaw
 		rotationMatrix(matrix!(3, 1, T)(0,1,0),ypr.y)* // Pitch
-		rotationMatrix(matrix!(3, 1, T)(1,0,0),ypr.z); // Roll
+		rotationMatrix(matrix!(3, 1, T)(1,0,0),ypr.x); // Roll
 }
 
 /**
@@ -867,6 +926,13 @@ void prettyPrint(int m, int n, T)(matrix!(m,n,T) mat)
 	}
 }
 
+auto lerp(int M, int N, T)(matrix!(M,N,T) m1, matrix!(M,N,T) m2, T percent)
+{
+	matrix!(M,N,T) rtn;
+	rtn.m_data[] = m1.m_data[] + (m2.m_data[] - m1.m_data[])*percent;
+	return rtn;
+} 
+
 // just some trash...
 private auto arrayInit(int m, int n, T)(T v)
 {
@@ -877,4 +943,3 @@ private auto arrayInit(int m, int n, T)(T v)
 	}
 	return rtn;
 }
-
