@@ -25,6 +25,7 @@ public struct camera
 		this.far = far;
 		eye = vec3(0,0,0);
 		rot = vec3(0,0,0);
+		invalidate(this);
 	}
 }
 
@@ -53,5 +54,60 @@ camera lerp(camera c1, camera c2, float p)
 void drawCam(Image img, camera c, camera renderCam)
 {
 	import graphics.mesh;
-	img.drawFrustrum(projectionMatrix(c.fov, c.aspect,c.near,c.near + (c.far - c.near)/10)*c.viewMatrix, renderCam);
+	img.drawFrustrum(projectionMatrix(c.fov/c.zoom, c.aspect,c.near,c.near + (c.far - c.near)/10)*c.viewMatrix, renderCam);
+}
+
+struct cameraPath
+{
+	import std.typecons;
+	import std.container;
+	import std.algorithm;
+	import std.exception;
+
+	private int minTime;
+	private int maxTime;
+	private int count = 0;
+	private DList!(Tuple!(int, camera)) frames;
+
+	public void addFrame(int time, camera cam)
+	{
+		cam.invalidate();
+		auto r = frames[].find!"a[0] > b"(time);
+		if(r.empty) frames.insertBack(tuple(time, cam));
+		else frames.insertBefore(r, tuple(time, cam));
+
+		if(count == 0)
+		{
+			minTime = time;
+			maxTime = time;
+		}
+		else
+		{
+			minTime = min(minTime, time);
+			maxTime = max(maxTime, time);
+		}
+		count ++;
+	}
+
+	public camera getCamAtTime(int time)
+	{
+		enforce(count > 0, "Can not get camera without any key frames");
+		if(count == 1) return frames.front[1];
+		if(time <= minTime) return frames.front[1];
+		if(time >= maxTime) return frames.back[1];
+
+		bool found = false;
+		Tuple!(int, camera) cam1;
+		Tuple!(int, camera) cam2;
+		foreach(v; frames)
+		{
+			if(v[0] > time)
+			{
+				cam2 = v;
+				break;
+			}
+			cam1 = v;
+		}
+		return lerp(cam1[1], cam2[1], (cast(float)time - cast(float)cam1[0])/(cast(float)cam2[0] - cast(float)cam1[0]));
+	}
 }
