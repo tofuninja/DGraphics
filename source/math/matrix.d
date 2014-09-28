@@ -859,9 +859,9 @@ auto rotationMatrix(T=float)(matrix!(3, 1, T) axis, T angle)
 auto rotationMatrix(T=float)(matrix!(3, 1, T) ypr)
 {
 	return 
-		rotationMatrix(matrix!(3, 1, T)(0,0,1),ypr.z)* // Yaw
-		rotationMatrix(matrix!(3, 1, T)(0,1,0),ypr.y)* // Pitch
-		rotationMatrix(matrix!(3, 1, T)(1,0,0),ypr.x); // Roll
+		rotationMatrix(matrix!(3, 1, T)(0,1,0),ypr.x)* // Yaw
+		rotationMatrix(matrix!(3, 1, T)(1,0,0),ypr.y)* // Pitch
+		rotationMatrix(matrix!(3, 1, T)(0,0,1),ypr.z); // Roll
 }
 
 /**
