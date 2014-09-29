@@ -334,7 +334,7 @@ class checkBox : Panel
 		img.clear(Color(0));
 		img.drawRoundedRectangleFill(vec2(0, 0), size, r, color);
 		img.drawRoundedRectangle(vec2(0, 0), size, r, Color(0,0,0));
-		img.drawText(chktxt, vec2(4,11),  Color(0,0,0));
+		img.drawText(chktxt, vec2(8,11),  Color(0,0,0));
 
 		img.drawBoxFill(vec2(size.x - 20, 10), vec2(10,10), Color(255,255,255));
 		img.drawBox(vec2(size.x - 20, 10), vec2(10,10), Color(0,0,0));
