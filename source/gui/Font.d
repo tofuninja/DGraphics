@@ -42,3 +42,29 @@ public void drawText(Image img, string text, vec2 loc, Color color)
 
 	}
 }
+
+public vec2 renderSize(string text)
+{
+	import std.algorithm;
+	int line = 0;
+	int charOnLine = 0;
+	int maxCharOnLine = 0;
+	for(int i = 0; i < text.length; i++)
+	{
+		char c = text[i];
+		if(c == '\n')
+		{
+			line++;
+			charOnLine = 0;
+		}
+		else
+		{
+			int row = c % 16;
+			int col = c / 16;
+			charOnLine++;
+		}
+		maxCharOnLine = max(maxCharOnLine, charOnLine);
+	}
+
+	return vec2(maxCharOnLine*8,(line + 1)*8);
+}
