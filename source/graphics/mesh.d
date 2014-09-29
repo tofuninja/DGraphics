@@ -101,10 +101,131 @@ public mesh boxMesh()
 	return new mesh(vecs, index);
 }
 
+public mesh sphereMesh()
+{
+	import std.math;
+	enum rowCount = 10;
+	enum rowRes = 10;
+	enum twoPi = PI*2;
+
+	int pointCount = (rowRes)*(rowCount - 2) + 2;
+	int triCount = 2*rowRes*(rowCount - 2);
+
+	vec3[] vecs = new vec3[pointCount];
+	uvec3[] index = new uvec3[triCount];
+
+	// Generate points
+	int k = 0;
+	for(float i = 0; i < rowCount; i++)
+	{
+
+		for(float j = 0; j < rowRes; j++)
+		{
+			vecs[k] = vec3(sin((j/rowRes)*twoPi)*sin((i/(rowCount - 1))*PI), cos((i/(rowCount - 1))*PI), cos((j/rowRes)*twoPi)*sin((i/(rowCount - 1))*PI));
+			k++;
+			if(i == 0 || i == rowCount - 1) break;
+		}
+	}
+
+	// Connect points into tris
+	k = 0;
+	for(int i = 0; i < rowRes; i++)
+	{
+		index[k] = uvec3(0, i + 1, (i + 1)%rowRes + 1); 
+		k++;
+	}
+
+	for(int i = 1; i < rowCount - 2; i++)
+	{
+		for(int j = 0; j < rowRes; j++)
+		{
+			uint  p0 = (i - 1)*rowRes + 1 + j;
+			uint  p1 = (i - 1)*rowRes + 1 + (j + 1)%rowRes;
+			uint  p2 = i*rowRes + 1 + j;
+			uint  p3 = i*rowRes + 1 + (j + 1)%rowRes;
+
+			index[k] = uvec3(p0,p1,p2);
+			index[k + 1] = uvec3(p2,p1,p3);
+			k += 2;
+		}
+	}
+
+	for(int i = 0; i < rowRes; i++)
+	{
+		index[k] = uvec3(pointCount - 1,pointCount - i - 2, pointCount - (i + 1)%rowRes - 2); 
+		k++;
+	}
+
+	return new mesh(vecs, index);
+}
+
+
+mesh cylinderMesh()
+{
+	import std.math;
+	enum rowRes = 10;
+	enum twoPi = PI*2;
+	int pointCount = rowRes*2 + 2;
+	int triCount = 4*rowRes;
+
+	vec3[] vecs = new vec3[pointCount];
+	uvec3[] index = new uvec3[triCount];
+	
+	// Generate points
+	int k = 1;
+	vecs[0] = vec3(0,1,0);
+	for(float i = 0; i < 2; i++)
+	{
+		for(float j = 0; j < rowRes; j++)
+		{
+			vecs[k] = vec3(sin((j/rowRes)*twoPi), 1 - (i*2), cos((j/rowRes)*twoPi));
+			k++;
+		}
+	}
+	vecs[k] = vec3(0,-1,0);
+
+	// Connect points into tris
+	k = 0;
+	for(int i = 0; i < rowRes; i++)
+	{
+		index[k] = uvec3(0, i + 1, (i + 1)%rowRes + 1); 
+		k++;
+	}
+
+	for(int j = 0; j < rowRes; j++)
+	{
+		int i = 1;
+		uint  p0 = (i - 1)*rowRes + 1 + j;
+		uint  p1 = (i - 1)*rowRes + 1 + (j + 1)%rowRes;
+		uint  p2 = i*rowRes + 1 + j;
+		uint  p3 = i*rowRes + 1 + (j + 1)%rowRes;
+		
+		index[k] = uvec3(p0,p1,p2);
+		index[k + 1] = uvec3(p2,p1,p3);
+		k += 2;
+	}
+	
+	for(int i = 0; i < rowRes; i++)
+	{
+		index[k] = uvec3(pointCount - 1,pointCount - i - 2, pointCount - (i + 1)%rowRes - 2); 
+		k++;
+	}
+
+	return new mesh(vecs, index);
+}
+
+
 public void drawWireModel(Image img, model m, camera c)
 {
 	import graphics.render;
 	auto mvp = c.projMatrix*c.viewMatrix*m.modelMatrix;
+
+	// No conectivity data, just render as a point cloud 
+	if(m.meshData.indices is null)
+	{
+		drawPoints(img, m, c);
+		return;
+	}
 
 	foreach(uvec3 tri; m.meshData.indices)
 	{
@@ -142,6 +263,34 @@ public void drawWireModel(Image img, model m, camera c)
 		plotLine(p0,p1,(m.meshData.colors !is null) ? m.meshData.colors[tri[0]] : Color(255,255,255,255));
 		plotLine(p1,p2,(m.meshData.colors !is null)? m.meshData.colors[tri[1]] : Color(255,255,255,255));
 		plotLine(p2,p0,(m.meshData.colors !is null) ? m.meshData.colors[tri[2]] : Color(255,255,255,255));
+	}
+}
+
+public void drawPoints(Image img, model m, camera c)
+{
+	auto mvp = c.projMatrix*c.viewMatrix*m.modelMatrix;
+	for(int i = 0; i < m.meshData.vectors.length; i++)
+	{
+		auto v = m.meshData.vectors[i];
+		vec4 p0;
+
+		p0.xyz = v;
+		p0.w = 1;
+		p0 = mvp*p0;
+		p0 = p0 / p0.w;
+		
+		auto size = vec2(img.Width, img.Height);
+		size = size/2.0f;
+		
+		void plotPoint(vec4 v0, Color col)
+		{
+			if(v0.z > -1 && v0.z < 1)
+			{
+				vec2 loc = v0.xy*size + size;
+				img[loc] = alphaBlend(col, img[loc]);
+			}
+		}
+		plotPoint(p0,(m.meshData.colors !is null) ? m.meshData.colors[i] : Color(255,255,255,255));
 	}
 }
 
