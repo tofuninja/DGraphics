@@ -75,6 +75,16 @@ class Panel
 
 	}
 
+	public void keyPress(int key, int scanCode, int action, int mods)
+	{
+		
+	}
+
+	public void charPress(dchar key)
+	{
+		
+	}
+
 	public void addChild(Panel p)
 	{
 		children.stableInsertFront(p);
@@ -107,10 +117,12 @@ class Panel
 
 			if(!found)
 			{
-				//writeln("not found in child");
+
 				mouseMove(state);
 				if(state.left == 1 || state.right == 1 || state.mid == 1)
 				{
+					// You clicked me *shy face* 
+					base.focus = this;
 					mouseDown(state);
 				}
 
@@ -166,10 +178,12 @@ class BasePanel : Panel
 	import derelict.glfw3.glfw3;
 
 	public static mouseState state;
+	public Panel focus;
 
 	public this(int w, int h)
 	{
 		base = this;
+		focus = this;
 		super(vec2(0,0), vec2(0,0), this);
 		size = vec2(w,h);
 		state.left = -1;
@@ -289,6 +303,56 @@ class Button : Panel
 	}
 }
 
+
+class checkBox : Panel
+{
+	enum float r = 8;
+
+
+	private string chktxt;
+	public Color color = Color(100,100,100);
+	private bool lastDrawValue = true;
+	public bool value;
+	
+	public this(vec2 loc, float length, string text, Panel owner)
+	{
+		super(loc, vec2(length,30), owner); 
+		chktxt = text;
+		drawChecked();
+	}
+	
+	public this(vec2 loc, float length, string text)
+	{
+		this(loc, length, text, basePan);
+	}
+	
+	private void drawChecked()
+	{
+		import gui.Font;
+		if(lastDrawValue == value) return;
+		lastDrawValue = value;
+		img.clear(Color(0));
+		img.drawRoundedRectangleFill(vec2(0, 0), size, r, color);
+		img.drawRoundedRectangle(vec2(0, 0), size, r, Color(0,0,0));
+		img.drawText(chktxt, vec2(4,11),  Color(0,0,0));
+
+		img.drawBoxFill(vec2(size.x - 20, 10), vec2(10,10), Color(255,255,255));
+		img.drawBox(vec2(size.x - 20, 10), vec2(10,10), Color(0,0,0));
+		if(value) img.drawBoxFill(vec2(size.x - 18, 12), vec2(6,6), Color(0,0,0));
+	}
+
+	override public void tick() 
+	{
+		drawChecked;
+	}
+
+	override public void mouseDown(mouseState state) 
+	{
+		value = !value;
+		drawChecked();
+	}
+}
+
 class ValueSlider : Panel
 {
 	private string title;
@@ -399,3 +463,24 @@ class ImageBox : Panel
 
 }
 
+class label : Panel
+{
+	import gui.Font;
+	enum float r = 8;
+	enum int boarder = 8;
+	public Color color = Color(100,100,100);
+	public this(vec2 loc, string txt, Panel owner)
+	{
+		super(loc, txt.renderSize + vec2(boarder*2,boarder*2), owner);
+
+		img.clear(Color(0));
+		img.drawRoundedRectangleFill(vec2(0, 0), size, r, color);
+		img.drawRoundedRectangle(vec2(0, 0), size, r, Color(0,0,0));
+		img.drawText(txt, vec2(boarder,boarder),  Color(0,0,0));
+	}
+	
+	public this(vec2 loc, string txt)
+	{
+		this(loc, txt, basePan);
+	}
+}
