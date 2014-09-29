@@ -64,8 +64,8 @@ struct cameraPath
 	import std.algorithm;
 	import std.exception;
 
-	private int minTime;
-	private int maxTime;
+	public int minTime;
+	public int maxTime;
 	private int count = 0;
 	private DList!(Tuple!(int, camera)) frames;
 

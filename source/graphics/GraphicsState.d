@@ -16,18 +16,32 @@ public GLFWwindow* window;
 public enum windowW = 900;
 public enum windowH = 500;
 public BasePanel basePan;
+public string baseDirectory;
 
 
 /**
  * Init Graphics State after openGl has been inited
  */
-public void initializeGraphicsState()
+public void initializeGraphicsState(string[] args)
 {
 	/* Initialize the librarys */
 	DerelictGL.load();
 	DerelictGL3.load();
 	DerelictGLFW3.load();
 	DerelictFI.load();
+
+	// set free image error handeler
+	{
+		import graphics.Image;
+		FreeImage_SetOutputMessage(&freeImgErrorHandler);
+	}
+
+	// Grab current directory
+	{
+		import std.file;
+		baseDirectory = getcwd();
+	}
+
 	
 	if (!glfwInit()) return;
 	
@@ -42,6 +56,14 @@ public void initializeGraphicsState()
 	DerelictGL.reload();
 
 	debug writeln("OpenGl Version:", DerelictGL3.loadedVersion);
+	{
+		import std.conv;
+		auto fiv = FreeImage_GetVersion();
+		int z;
+		for(z = 0; fiv[z] != 0; z++) {}
+		auto ver = fiv[0 .. z].to!string;
+		debug writeln("FreeImage Version:", ver);
+	}
 	setUpKeyboard();
 
 	/*
