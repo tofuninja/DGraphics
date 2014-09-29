@@ -2,6 +2,9 @@
 import graphics.Color;
 import math.matrix;
 
+import derelict.freeimage.freeimage;
+
+string freeImgError = "";
 
 struct Image
 {
@@ -64,7 +67,6 @@ struct Image
  */
 void saveImage(T)(Image i, T path, int quality = 100) if(is(T == string) || is(T == wstring) || is(T == dstring))
 {
-	import derelict.freeimage.freeimage;
 	import std.conv;
 
 	wstring wpath = wtext(path~'\0');
@@ -93,6 +95,7 @@ void saveImage(T)(Image i, T path, int quality = 100) if(is(T == string) || is(T
 			color.rgbGreen 		= *(cast(byte*)(&col.Green)); 
 			color.rgbBlue 		= *(cast(byte*)(&col.Blue)); 
 			color.rgbReserved 	= *(cast(byte*)(&col.Alpha)); 
+
 			FreeImage_SetPixelColor(img, x, y, &color);
 		}
 	}
@@ -113,7 +116,7 @@ void saveImage(T)(Image i, T path, int quality = 100) if(is(T == string) || is(T
 	// Save image
 	bool saved = (FreeImage_SaveU(fileFormat, img, wpath.ptr, flags) != 0);
 	FreeImage_Unload(img);
-	if(!saved) throw new Exception("Failed to save image");
+	if(!saved) throw new Exception("Failed to save image(" ~ path ~ "):" ~ freeImgError);
 }
 
 /**
@@ -121,7 +124,7 @@ void saveImage(T)(Image i, T path, int quality = 100) if(is(T == string) || is(T
  */
 Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dstring))
 {
-	import derelict.freeimage.freeimage;
+
 	import std.string;
 	import std.conv;
 
@@ -185,6 +188,18 @@ Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dst
 	FreeImage_Unload(img);
 
 	return rtn;
+}
+
+extern(C) void freeImgErrorHandler(FREE_IMAGE_FORMAT fif, const(char)* msg) nothrow
+{
+	import std.conv;
+	try
+	{
+		int z;
+		for(z = 0; msg[z] != 0; z++) {}
+		freeImgError = msg[0 .. z].to!string;
+	}
+	catch(Exception){}
 }
 
 void clear(Image img, Color c)
@@ -302,3 +317,4 @@ void drawImage(Image dest, Image src, vec2 loc)
 		}
 	}
 }
+
