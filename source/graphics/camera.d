@@ -111,3 +111,43 @@ struct cameraPath
 		return lerp(cam1[1], cam2[1], (cast(float)time - cast(float)cam1[0])/(cast(float)cam2[0] - cast(float)cam1[0]));
 	}
 }
+
+void saveCameraPath(cameraPath c, string filePath)
+{
+	import std.stdio;
+	import std.typecons;
+	auto f = File(filePath, "w");
+	foreach(Tuple!(int, camera) v; c.frames)
+	{
+		camera cam = v[1];
+		f.writeln(v[0], ":", cam.fov, " ", cam.aspect, " ", cam.zoom, " ", cam.near, " ", cam.far, " ", cam.eye, " ", cam.rot);
+	}
+}
+
+cameraPath loadCameraPath(string filePath)
+{
+	import std.stdio;
+	import std.typecons;
+	import std.format;
+	auto f = File(filePath, "r");
+
+	cameraPath rtn;
+
+	foreach(char[] line; f.byLine)
+	{
+		if(line == "" || line == "\n") continue;
+		int time;
+		float fov, aspect, zoom, near, far, eye_x, eye_y, eye_z, rot_x, rot_y, rot_z;
+		camera c;
+		line.formattedRead("%s:%s %s %s %s %s [%s;%s;%s] [%s;%s;%s]", &time, &fov, &aspect, &zoom, &near, &far, &eye_x, &eye_y, &eye_z, &rot_x, &rot_y, &rot_z);
+		c.fov = fov;
+		c.aspect = aspect;
+		c.zoom = zoom;
+		c.near = near;
+		c.far = far;
+		c.eye = vec3(eye_x, eye_y, eye_z);
+		c.rot = vec3(rot_x, rot_y, rot_z);
+		rtn.addFrame(time,c);
+	}
+	return rtn;
+}
