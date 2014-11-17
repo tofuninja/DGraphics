@@ -1,6 +1,6 @@
 ﻿module graphics.camera;
 import math.matrix;
-import graphics.GraphicsState;
+import graphics.hw.state;
 import graphics.Image;
 import graphics.mesh;
 
@@ -16,7 +16,7 @@ public struct camera
 	public vec3 eye;
 	public vec3 rot;
 
-	public this(float fov, float aspect, float near = -1, float far = -100)
+	public this(float fov, float aspect, float near = 100, float far = 1)
 	{
 		this.fov = fov;
 		this.aspect = aspect;
