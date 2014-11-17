@@ -5,27 +5,35 @@ import graphics.camera;
 import graphics.Image;
 
 
-
 public struct model
 {
 	// Rotation, translation and scaling are all handeled by the model matrix
 	public mat4 modelMatrix;
 	public mesh meshData;
+	public Image texture; 
 
 	public this(mesh meshDat)
 	{
 		meshData = meshDat;
 		modelMatrix = identity!4;
+		texture = null;
+	}
+
+	public this(mesh meshDat, Image tex)
+	{
+		this(meshDat);
+		texture = tex;
 	}
 }
 
 public class mesh
 {
-	private vec3[] vectors;
-	private Color[] colors;
-	private vec3[] normals;
-	private vec2[] texCords;
-	private uvec3[] indices;
+	public vec3[] vectors;
+	public Color[] colors;
+	public vec3[] vcolors;
+	public vec3[] normals;
+	public vec2[] texCords;
+	public uvec3[] indices;
 
 	private vec3 lowerBound;
 	private vec3 upperBound;
@@ -75,30 +83,60 @@ public class mesh
 public mesh boxMesh()
 {
 	vec3[] vecs = new vec3[8];
-	vecs[0] = vec3(-1,-1,-1);
-	vecs[1] = vec3( 1,-1,-1);
-	vecs[2] = vec3( 1, 1,-1);
-	vecs[3] = vec3(-1, 1,-1);
-	vecs[4] = vec3(-1,-1, 1);
-	vecs[5] = vec3( 1,-1, 1);
-	vecs[6] = vec3( 1, 1, 1);
-	vecs[7] = vec3(-1, 1, 1);
+	vecs[0] = vec3(-1, 1, 1);
+	vecs[1] = vec3( 1, 1, 1);
+	vecs[2] = vec3(-1,-1, 1);
+	vecs[3] = vec3( 1,-1, 1);
+	vecs[4] = vec3(-1, 1,-1);
+	vecs[5] = vec3( 1, 1,-1);
+	vecs[6] = vec3(-1,-1,-1);
+	vecs[7] = vec3( 1,-1,-1);
 
 	uvec3[] index = new uvec3[6*2];
 
-	index[0] = uvec3(0,1,2);
-	index[1] = uvec3(2,3,0);
-	index[2] = uvec3(1,5,2);
-	index[3] = uvec3(2,5,6);
-	index[4] = uvec3(3,2,7);
-	index[5] = uvec3(7,2,6);
-	index[6] = uvec3(0,3,4);
-	index[7] = uvec3(3,7,4);
-	index[8] = uvec3(0,4,1);
-	index[9] = uvec3(1,4,5);
-	index[10] = uvec3(4,7,5);
-	index[11] = uvec3(5,7,6);
-	return new mesh(vecs, index);
+	index[0] = uvec3(0,2,3);
+	index[1] = uvec3(3,1,0);
+	index[2] = uvec3(1,3,7);
+	index[3] = uvec3(7,5,1);
+	index[4] = uvec3(0,1,5);
+	index[5] = uvec3(5,4,0);
+	index[6] = uvec3(7,4,5);
+	index[7] = uvec3(7,6,4);
+	index[8] = uvec3(4,6,0);
+	index[9] = uvec3(6,2,0);
+	index[10] = uvec3(6,7,2);
+	index[11] = uvec3(2,7,3);
+	mesh m = new mesh(vecs, index);
+
+	vec3[] norms = new vec3[8];
+	for(int i = 0; i < 8; i++)
+	{
+		norms[i] = normalize(vecs[i]);
+	}
+	m.normals = norms;
+
+	Color[] cols = new Color[8];
+	cols[] = Color(255,255,255,255);
+	m.colors = cols;
+
+	vec3[] vcols = new vec3[8];
+	vcols[] = vec3(1,1,1);
+	m.vcolors = vcols;
+
+	enum scale = 1;
+	vec2[] uvArr = new vec2[8];
+	uvArr[0] = vec2(0,0);
+	uvArr[1] = vec2(scale,0);
+	uvArr[2] = vec2(0,scale);
+	uvArr[3] = vec2(scale,scale);
+	uvArr[4] = vec2(scale,scale);
+	uvArr[5] = vec2(0,scale);
+	uvArr[6] = vec2(scale,0);
+	uvArr[7] = vec2(0,0);
+
+	m.texCords = uvArr;
+
+	return m;
 }
 
 public mesh sphereMesh()
@@ -214,6 +252,103 @@ mesh cylinderMesh()
 	return new mesh(vecs, index);
 }
 
+// Replaced by runShader
+/*
+public void draw(alias vertShader, alias pixShader)(Image img, model m, camera c, light l)
+{
+	import graphics.render;
+	auto mm = m.modelMatrix;
+	auto vp = c.projMatrix*c.viewMatrix;
+	
+	// No conectivity data, just render as a point cloud 
+	if(m.meshData.indices is null)
+	{
+		drawPoints(img, m, c);
+		return;
+	}
+	
+	foreach(uvec3 tri; m.meshData.indices)
+	{
+		vec4 p0;
+		vec4 p1;
+		vec4 p2;
+		
+		p0.xyz = m.meshData.vectors[tri[0]];
+		p1.xyz = m.meshData.vectors[tri[1]];
+		p2.xyz = m.meshData.vectors[tri[2]];
+		
+		p0.w = 1;
+		p1.w = 1;
+		p2.w = 1;
+
+		p0 = mm*p0;
+		p1 = mm*p1;
+		p2 = mm*p2;
+
+		Color c1,c2,c3;
+
+		if(l.mode == 1 && m.meshData.normals !is null)
+		{
+			import std.algorithm;
+			c1 = /*l.col*l.amb +* / l.col*min(1,l.dif*max(0,dot(m.meshData.normals[tri[0]], p0.xyz - l.loc)));
+			c2 = /*l.col*l.amb +* / l.col*min(1,l.dif*max(0,dot(m.meshData.normals[tri[1]], p1.xyz - l.loc)));
+			c3 = /*l.col*l.amb +* / l.col*min(1,l.dif*max(0,dot(m.meshData.normals[tri[2]], p2.xyz - l.loc)));
+		}
+		
+		p0 = vp*p0;
+		p1 = vp*p1;
+		p2 = vp*p2;
+		
+		p0 = p0 / p0.w;
+		p1 = p1 / p1.w;
+		p2 = p2 / p2.w;
+		
+		auto size = vec2(img.Width, img.Height);
+		size = size/2.0f;
+
+		/*
+		void plotTri(vec4 v0, vec4 v1, vec4 v2, Color col)
+		{
+
+		}
+
+		plotLine(p0,p1,(m.meshData.colors !is null) ? m.meshData.colors[tri[0]] : Color(255,255,255,255));
+		plotLine(p1,p2,(m.meshData.colors !is null)? m.meshData.colors[tri[1]] : Color(255,255,255,255));
+		plotLine(p2,p0,(m.meshData.colors !is null) ? m.meshData.colors[tri[2]] : Color(255,255,255,255));
+		* /
+
+		import util.debugger;
+		import std.stdio;
+
+
+		if((p0.z > -1 && p0.z < 1) && (p1.z > -1 && p1.z < 1) && (p2.z > -1 && p2.z < 1))
+		{
+			//img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
+			vec3 A = p0.xyz;
+			vec3 B = p1.xyz;
+			vec3 C = p2.xyz;
+			A.xy = A.xy*size + size;
+			B.xy = B.xy*size + size;
+			C.xy = C.xy*size + size;
+			foreach(vec3 point, vec3 p; triangleRaster3D(A, B, C))
+			{
+				Color col = Color(255,255,255,255);
+				if(l.mode == 0)
+				{
+					if(m.meshData.colors !is null) col = m.meshData.colors[tri[0]]*p.x + m.meshData.colors[tri[1]]*p.y + m.meshData.colors[tri[2]]*p.z;
+				}
+				else if(l.mode == 1)
+				{
+					col = Color(cast(byte)(255*(point.z + 2)),0,0);//c1*p.x + c2*p.y + c3*p.z;
+				}
+				//writeln(point.z);
+				//breakPoint();
+				img[point] = col;
+			}
+		}
+	}
+}
+*/
 
 public void drawWireModel(Image img, model m, camera c)
 {
@@ -256,7 +391,15 @@ public void drawWireModel(Image img, model m, camera c)
 		{
 			if((v0.z > -1 && v0.z < 1) && (v1.z > -1 && v1.z < 1))
 			{
-				img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
+				//img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
+				vec3 s = v0.xyz;
+				vec3 e = v1.xyz;
+				s.xy = s.xy*size + size;
+				e.xy = e.xy*size + size;
+				foreach(vec3 point, float percent; lineRaster3D(s, e))
+				{
+					img[point] = col;
+				}
 			}
 		}
 
@@ -278,19 +421,8 @@ public void drawPoints(Image img, model m, camera c)
 		p0.w = 1;
 		p0 = mvp*p0;
 		p0 = p0 / p0.w;
-		
-		auto size = vec2(img.Width, img.Height);
-		size = size/2.0f;
-		
-		void plotPoint(vec4 v0, Color col)
-		{
-			if(v0.z > -1 && v0.z < 1)
-			{
-				vec2 loc = v0.xy*size + size;
-				img[loc] = alphaBlend(col, img[loc]);
-			}
-		}
-		plotPoint(p0,(m.meshData.colors !is null) ? m.meshData.colors[i] : Color(255,255,255,255));
+
+		img[p0.xyz] = (m.meshData.colors !is null) ? m.meshData.colors[i] : Color(255,255,255,255);
 	}
 }
 
@@ -346,7 +478,15 @@ void drawFrustrum(Image img, mat4 m, camera c)
 		{
 			if((v0.z > -1 && v0.z < 1) && (v1.z > -1 && v1.z < 1))
 			{
-				img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
+				//img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
+				vec3 s = v0.xyz;
+				vec3 e = v1.xyz;
+				s.xy = s.xy*size + size;
+				e.xy = e.xy*size + size;
+				foreach(vec3 point, float percent; lineRaster3D(s, e))
+				{
+					img[point] = col;
+				}
 			}
 		}
 		
@@ -428,6 +568,7 @@ mesh loadMesh(string file)
 	mesh rtn = new mesh();
 	rtn.vectors = verts;
 	rtn.colors = colsConverted;
+	rtn.vcolors = cols;
 	rtn.normals = norms;
 	rtn.texCords = texCords;
 	rtn.indices = tris;
