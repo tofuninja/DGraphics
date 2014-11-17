@@ -1,16 +1,24 @@
 ﻿module graphics.Image;
 import graphics.Color;
 import math.matrix;
+import std.stdio;
 
 import derelict.freeimage.freeimage;
 
 string freeImgError = "";
 
-struct Image
+class Image
 {
-	private int m_width = 0;
-	private int m_height = 0;
-	private Color[] m_data;
+	protected int m_width = 0;
+	protected int m_height = 0;
+	protected Color[] m_data;
+
+	this(Image img)
+	{
+		m_width = img.m_width;
+		m_height = img.m_height;
+		m_data = img.m_data.dup;
+	}
 
 	this(int width, int height)
 	{
@@ -23,39 +31,98 @@ struct Image
 	@property int Height()  { return m_height; }
 	@property Color[] Data()  { return m_data; }
 
-	ref Color opIndex(int x, int y)
+	Color opIndex(int x, int y)
 	{
-		static Color failRtn = Color(0);
 		if(x<0 || y<0 || x>=m_width || y>=m_height) 
 		{
-			failRtn = Color(0);
-			return failRtn; // Silently fail... 
+			return  Color(0); // Silently fail... 
 		}
-		return m_data[x + y*m_width];
+		return getPixel(x,y);
 	}
 
-	ref opIndex(ivec2 index)
+	void opIndexAssign(Color c, int x, int y)
+	{
+		if(x<0 || y<0 || x>=m_width || y>=m_height) 
+		{
+			return; // Silently fail... 
+		}
+		setPixel(x, y, c);
+	}
+
+	Color opIndex(ivec2 index)
 	{
 		return opIndex(index.x,index.y);
 	}
 
-	ref Color opIndex(vec2 index)
+	void opIndexAssign(Color c, ivec2 index)
+	{
+		opIndexAssign(c, index.x, index.y);
+	}
+
+	Color opIndex(vec2 index)
 	{
 		return opIndex(cast(int)index.x,cast(int)index.y);
+	}
+	
+	void opIndexAssign(Color c, vec2 index)
+	{
+		opIndexAssign(c, cast(int)index.x, cast(int)index.y);
+	}
+
+	Color opIndex(vec3 p)
+	{
+		if(p.x<0 || p.y<0 || p.x>=m_width || p.y>=m_height) 
+		{
+			return  Color(0); // Silently fail... 
+		}
+		return getPixel3D(p);
+	}
+	
+	void opIndexAssign(Color c, vec3 p)
+	{
+		if(p.x<0 || p.y<0 || p.x>=m_width || p.y>=m_height) 
+		{
+			return; // Silently fail... 
+		}
+		setPixel3D(p,c);
+	}
+
+	public Color getPixel(int x, int y)
+	{
+		return m_data[x + y*m_width];
+	}
+
+	public void setPixel(int x, int y, Color c)
+	{
+		m_data[x + y*m_width] = c;
+	}
+
+	public Color getPixel3D(vec3 p)
+	{
+		return getPixel(cast(int) p.x, cast(int) p.y);
+	}
+
+	public void setPixel3D(vec3 p, Color c)
+	{
+		setPixel(cast(int) p.x, cast(int) p.y, c);
 	}
 
 	public Image dup()
 	{
-		Image rtn;
-		rtn.m_width = m_width;
-		rtn.m_height = m_height;
-		rtn.m_data = m_data.dup;
-		return rtn;
+		return new Image(this);
+	}
+}
+
+class AlphaBlendedImage : Image
+{
+	public this(int w, int h)
+	{
+		super(w,h);
 	}
 
-	public ref Color pixel(int x, int y)
+	public override public void setPixel( int x, int y, Color c) 
 	{
-		return m_data[x + y*m_width];
+		m_data[x + y*m_width] = alphaBlend(c, m_data[x + y*m_width]);
 	}
 }
 
@@ -166,7 +233,7 @@ Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dst
 	// Get image data
 	uint width = FreeImage_GetWidth(img);
 	uint height = FreeImage_GetHeight(img);
-	Image rtn = Image(width,height);
+	Image rtn = new Image(width,height);
 
 	for(int x = 0; x < width; x++)
 	{
@@ -313,8 +380,99 @@ void drawImage(Image dest, Image src, vec2 loc)
 	{
 		for(int j = 0; j < src.Height; j++)
 		{
-			dest[cast(int)loc.x + i, cast(int)loc.y + j] = alphaBlend(src[i,j],dest[cast(int)loc.x + i, cast(int)loc.y + j]);
+			dest[cast(int)loc.x + i, cast(int)loc.y + j] = src[i,j];
 		}
 	}
 }
 
+Color textureLookupNearest(Image img, vec2 uv)
+{
+	import std.math;
+	
+	if(img is null) return Color(255,255,255);
+	
+	float u = uv.x;
+	float v = uv.y;
+	
+	int x = cast(int)(u*img.Width);
+	int y = cast(int)(v*img.Height);
+	
+	x %= img.Width;
+	y %= img.Height;
+	
+	if(x < 0) x = img.Width + x;
+	if(y < 0) y = img.Height + y;
+	
+	//writeln(img.Width, " * ", img.Height);
+	//writeln(x,' ',y);
+	
+	return img[x,y];	
+}
+
+Color textureLookupNearestMirror(Image img, vec2 uv)
+{
+	import std.math;
+	return img.textureLookupNearest(uv.uvMirror);
+}
+
+Color textureLookupBilinear(Image img, vec2 uv)
+{
+	import std.math;
+	
+	if(img is null) return Color(255,255,255);
+
+	ivec2 inBounds(int xl, int yl)
+	{
+		xl %= img.Width;
+		yl %= img.Height;
+		
+		if(xl < 0) xl = img.Width + xl;
+		if(yl < 0) yl = img.Height + yl;
+		return ivec2(xl,yl);
+	}
+
+	float u = uv.x;
+	float v = uv.y;
+	
+	float x = (u*img.Width);
+	float y = (v*img.Height);
+	
+	x %= img.Width;
+	y %= img.Height;
+	
+	if(x < 0) x = img.Width + x;
+	if(y < 0) y = img.Height + y;
+
+	int ix = cast(int)x;
+	int iy = cast(int)y;
+
+	float dx = x - ix;
+	float dy = y - iy;
+
+	Color c1 = img[ix,iy];
+	Color c2 = img[inBounds(ix + 1, iy)];
+	Color c3 = img[inBounds(ix, iy + 1)];
+	Color c4 = img[inBounds(ix + 1, iy + 1)];
+
+	return c1*(1-dx)*(1-dy) + c2*(dx)*(1-dy) + c3*(1-dx)*(dy) + c4*(dx)*(dy);
+}
+
+Color textureLookupBilinearMirror(Image img, vec2 uv)
+{
+	import std.math;
+	return img.textureLookupBilinear(uv.uvMirror);
+}
+
+vec2 uvMirror(vec2 uv)
+{
+	float x = uv.x;
+	float y = uv.y;
+	x %= 2;
+	y %= 2;
+	
+	if(x < 0) x = 2 + x;
+	if(y < 0) y = 2 + y;
+	if(x > 1) x = 2 - x;
+	if(y > 1) y = 2 - y;
+	return vec2(x, y);
+}
