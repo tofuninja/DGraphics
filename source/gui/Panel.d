@@ -5,7 +5,7 @@ import std.container;
 import graphics.Image;
 import graphics.render;
 import graphics.Color;
-import graphics.GraphicsState;
+import graphics.hw.state;
 import math.matrix;
 
 struct mouseState
@@ -23,9 +23,23 @@ class Panel
 	protected vec2 loc = vec2(0,0);
 	protected vec2 windowLoc = vec2(0,0);
 	protected vec2 size = vec2(0,0);
-	protected Image img;
+	public Image img;
 	protected Panel parent;
 	protected BasePanel base;
+
+	public this(vec2 Location, Image image, Panel owner)
+	{
+		parent = owner;
+		base = (owner is null)? null : owner.base;
+		
+		loc = Location;
+		windowLoc = ((owner is null)? vec2(0) : owner.windowLoc) + loc;
+		if(image !is null) size = vec2(image.Width, image.Height);
+		else size = vec2(0,0);
+		img = image;
+		
+		if(owner !is null && owner != this) owner.addChild(this);
+	}
 
 	public this(vec2 Location, vec2 Size, Panel owner)
 	{
@@ -35,7 +49,7 @@ class Panel
 		loc = Location;
 		windowLoc = ((owner is null)? vec2(0) : owner.windowLoc) + loc;
 		size = Size;
-		if(size != vec2(0,0)) img = Image(cast(int)size.x, cast(int)size.y);
+		if(size != vec2(0,0)) img = new AlphaBlendedImage(cast(int)size.x, cast(int)size.y);
 		
 		if(owner !is null && owner != this) owner.addChild(this);
 	}
@@ -156,7 +170,7 @@ class Panel
 	{
 		auto l = windowLoc;
 
-		if(size != vec2(0,0) && base !is null)
+		if(img !is null && base !is null)
 		{
 			import derelict.opengl3.gl;
 			float x = (l.x/base.size.x)*2.0f - 1.0f;
