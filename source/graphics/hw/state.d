@@ -1,4 +1,4 @@
-﻿module graphics.GraphicsState;
+﻿module graphics.hw.state;
 // Global Graphics State
 
 import derelict.glfw3.glfw3;
@@ -55,18 +55,18 @@ public void initializeGraphicsState(string[] args)
 	DerelictGL3.reload();
 	DerelictGL.reload();
 
-	debug writeln("OpenGl Version:", DerelictGL3.loadedVersion);
+	debug writeln("OpenGl Version: ", DerelictGL3.loadedVersion);
 	{
 		import std.conv;
 		auto fiv = FreeImage_GetVersion();
 		int z;
 		for(z = 0; fiv[z] != 0; z++) {}
 		auto ver = fiv[0 .. z].to!string;
-		debug writeln("FreeImage Version:", ver);
+		debug writeln("FreeImage Version: ", ver);
 	}
 	setUpKeyboard();
 
-	/*
+
 	// Enforce required gl
 	{
 		import std.exception;
@@ -85,7 +85,7 @@ public void initializeGraphicsState(string[] args)
 	}
 
 	debug writeln("Texture Unit Count: ", texUnitCount);
-	*/
+
 
 	{ // Load font file
 		import gui.Font;
@@ -105,7 +105,7 @@ public int TextureUnitCount() { return texUnitCount; }
  */
 public struct TextureImageUnit
 {
-	import graphics.Texture;
+	import graphics.hw.texture;
 	private int loc = 0;
 
 	private this(int bindLoc)
@@ -124,7 +124,7 @@ public struct TextureImageUnit
 	public void bind(Texture tex)
 	{
 		glActiveTexture(GL_TEXTURE0 + loc);
-		glBindTexture(tex.textureType, tex.textureID);
+		glBindTexture(tex.textureType, tex.id);
 	}
 }
 
