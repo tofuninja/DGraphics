@@ -33,7 +33,7 @@ public void drawText(Image img, string text, vec2 loc, Color color)
 				{
 					Color fontCol = fontImg[row*8 + x, (col*8 + y)];
 					if(fontCol.G != 0)
-						img[vec2(x + charOnLine*8,y + line*10) + loc] = alphaBlend(color, img[vec2(x + i*8,y) + loc]);
+						img[vec2(x + charOnLine*8,y + line*10) + loc] = color;
 				}
 			}
 
