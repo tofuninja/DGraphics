@@ -5,33 +5,31 @@ import std.container;
 import graphics.Image;
 import graphics.render;
 import graphics.Color;
-import graphics.GraphicsState;
+import graphics.hw.state;
 import math.matrix;
 import gui.Panel;
 
 class Tetris : Panel
 {
+	enum boardW = 15;
+	enum boardH = 25;
+	enum boarder = 10;
 	import std.random;
 	enum bs = vec2(10,10);
-	enum boardStart = vec2(20,20);
+	enum boardStart = vec2(boarder,boarder);
 	Image blocks;
 	tetrisPiece active;
 	int time;
-	
+
 	int score = 0;
 	
 	public this(vec2 loc, Panel owner)
 	{
-		super(loc,vec2(200,300), owner);
-		blocks = Image(10,22);
+		super(loc,bs * vec2(boardW,boardH) + vec2(boarder*2 + 100, boarder*2), owner);
+		blocks = new Image(boardW, boardH);
 		blocks.clear(Color(0,0,0,42));
 		active = tetrisPiece(uniform(0,7));
-		active.loc = ivec2(4,0);
-		
-		new Button(vec2(20,bs.y*22 + 30),vec2(30,30),"<", &leftClick, this);
-		new Button(vec2(60,bs.y*22 + 30),vec2(30,30),">", &rightClick, this);
-		new Button(vec2(100,bs.y*22 + 30),vec2(30,30),"v", &downClick, this);
-		new Button(vec2(140,bs.y*22 + 30),vec2(30,30),"@", &rotClick, this);
+		active.loc = ivec2(boardW/2 - 1,0);
 		updateRender();
 	}
 	
@@ -69,11 +67,23 @@ class Tetris : Panel
 	{
 		moveActive(ivec2(0,0), 1);
 	}
-	
+
+	override public void keyPress( int key, int scanCode, int action, int mods) 
+	{
+		import derelict.glfw3.glfw3;
+		if(action == GLFW_PRESS || action == GLFW_REPEAT)
+		{
+			if(key == GLFW_KEY_A) leftClick();
+			if(key == GLFW_KEY_D) rightClick();
+			if(key == GLFW_KEY_SPACE) downClick();
+			if(key == GLFW_KEY_S || key == GLFW_KEY_W) rotClick();
+		}
+	}
+
 	override public void tick() 
 	{
 		time ++;
-		if(time % 60 == 0)
+		if(time % 100 == 0)
 		{
 			bool b = moveActive(ivec2(0,1));
 			if(!b)
@@ -108,8 +118,8 @@ class Tetris : Panel
 		}
 		
 		renderActive(img);
-		
-		img.drawText("Score\n" ~ score.to!string, vec2(130,10),Color(0,0,0));
+
+		img.drawText("Score\n" ~ score.to!string, vec2(bs.x*boardW + boarder * 2,10),Color(0,0,0));
 		img.drawBox(boardStart, vec2(bs.x*blocks.Width,bs.y*blocks.Height), Color(0,0,0));
 		img.drawBox(vec2(0,0),size, Color(0,0,0));
 	}
