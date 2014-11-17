@@ -63,7 +63,8 @@ struct matrix(int m, int n, T = float)
 {
 	static assert(m > 0,"Row count must be greater than 0");
 	static assert(n > 0,"Column count must be greater than 0");
-	
+
+	public enum iAmAMatrix = true;
 	public enum rows = m;
 	public enum columns = n;
 	public enum bool isVector = (columns == 1); // Vectors will always be column vectors
@@ -942,4 +943,15 @@ private auto arrayInit(int m, int n, T)(T v)
 		rtn[i] = v;
 	}
 	return rtn;
+}
+
+template isMatrix(T)
+{
+	static if(__traits(hasMember, T, "iAmAMatrix")) enum isMatrix = true;
+	else enum isMatrix = false;
+}
+
+auto modelMatrix(vec3 translation, vec3 rotation, vec3 scale)
+{
+	return translationMatrix(translation)*rotationMatrix(rotation)*scalingMatrix(scale);
 }
