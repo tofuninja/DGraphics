@@ -4,6 +4,7 @@
 	"copyright": "Copyright © 2014, snuffy",
 	"authors": ["Snuffy"],
 	"targetPath" : "$PACKAGE_DIR/bin",
+	"workingDirectory" : "/bin",
 	"dependencies": 
 	{
 		"derelict-glfw3": ">=1.0.0",

@@ -8,3 +8,5 @@ bin/trace.def
 bin/trace.log
 dub.userprefs
 *.lib
+.dub/dub.json
+dub.selections.json
