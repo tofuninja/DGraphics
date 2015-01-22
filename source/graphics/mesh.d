@@ -1,8 +1,8 @@
 ﻿module graphics.mesh;
 import math.matrix;
-import graphics.Color;
+import graphics.color;
 import graphics.camera;
-import graphics.Image;
+import graphics.image;
 
 
 public struct model

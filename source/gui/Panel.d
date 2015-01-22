@@ -1,10 +1,10 @@
-﻿module gui.Panel;
+﻿module gui.panel;
 
 import std.stdio;
 import std.container;
-import graphics.Image;
+import graphics.image;
 import graphics.render;
-import graphics.Color;
+import graphics.color;
 import graphics.hw.state;
 import math.matrix;
 
@@ -277,7 +277,7 @@ class Button : Panel
 
 	private void drawBtnDown()
 	{
-		import gui.Font;
+		import gui.font;
 		if(down) return;
 		down = true;
 		img.clear(Color(0));
@@ -290,7 +290,7 @@ class Button : Panel
 	{
 		if(!down) return;
 		down = false;
-		import gui.Font;
+		import gui.font;
 		Color darker = color;
 		darker.A = 220;
 		darker = alphaBlend(darker,Color(0));
@@ -342,7 +342,7 @@ class checkBox : Panel
 	
 	private void drawChecked()
 	{
-		import gui.Font;
+		import gui.font;
 		if(lastDrawValue == value) return;
 		lastDrawValue = value;
 		img.clear(Color(0));
@@ -415,9 +415,9 @@ class ValueSlider : Panel
 
 	private void drawSlider()
 	{
-		import gui.Font;
+		import gui.font;
 		import std.conv;
-		import graphics.Image;
+		import graphics.image;
 		enum float roundRecR = 5;
 		img.clear(Color(0));
 
@@ -479,7 +479,7 @@ class ImageBox : Panel
 
 class label : Panel
 {
-	import gui.Font;
+	import gui.font;
 	enum float r = 8;
 	enum int boarder = 8;
 	public Color color = Color(100,100,100);

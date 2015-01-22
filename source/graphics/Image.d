@@ -1,5 +1,5 @@
-﻿module graphics.Image;
-import graphics.Color;
+﻿module graphics.image;
+import graphics.color;
 import math.matrix;
 import std.stdio;
 
@@ -120,7 +120,7 @@ class AlphaBlendedImage : Image
 		super(w,h);
 	}
 
-	public override public void setPixel( int x, int y, Color c) 
+	public override void setPixel( int x, int y, Color c) 
 	{
 		m_data[x + y*m_width] = alphaBlend(c, m_data[x + y*m_width]);
 	}
@@ -208,7 +208,7 @@ Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dst
 	int flags = 0;
 	if(fileFormat == FIF_JPEG) flags = JPEG_ACCURATE;
 	FIBITMAP* img = FreeImage_LoadU(fileFormat, wpath.ptr, flags);
-	if(img is null) throw new Exception("Image failed to load");
+	if(img is null) throw new Exception("Image " ~ path ~ " failed to load");
 
 
 	// Convert if needed

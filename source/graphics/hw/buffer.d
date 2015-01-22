@@ -176,7 +176,7 @@ public struct IndexBuffer
 public bool isOpenGlCompatibleStruct(T)()
 {
 	import math.matrix;
-	import graphics.Color;
+	import graphics.color;
 	if(isMatrix!T) return true;
 	else if(is(T == Color)) return true;
 	else return false;

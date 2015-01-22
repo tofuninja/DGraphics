@@ -400,7 +400,7 @@ public struct ShaderInput
 	
 	private void attachAtrib(T)(int index, int stride, int offset, TypeInfo destType)
 	{
-		import graphics.Color;
+		import graphics.color;
 		import math.matrix;
 		glEnableVertexAttribArray(index);
 
@@ -539,6 +539,7 @@ private TypeInfo toTypeInfo(GLint gl_type)
 		case GL_DOUBLE_MAT4x3:		return typeid(matrix!(4,3,double));
 		
 		case GL_SAMPLER_2D:			return typeid(TextureImageUnit);
+		case GL_SAMPLER_2D_SHADOW:	return typeid(TextureImageUnit);
 
 		// TODO: Add more smapler types
 

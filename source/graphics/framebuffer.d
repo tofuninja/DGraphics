@@ -1,7 +1,7 @@
-﻿module graphics.FrameBuffer;
+﻿module graphics.frameBuffer;
 
-import graphics.Image;
-import graphics.Color;
+import graphics.image;
+import graphics.color;
 import math.matrix;
 import std.stdio;
 

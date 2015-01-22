@@ -2,12 +2,12 @@
 
 import std.stdio;
 import std.container;
-import graphics.Image;
+import graphics.image;
 import graphics.render;
-import graphics.Color;
+import graphics.color;
 import graphics.hw.state;
 import math.matrix;
-import gui.Panel;
+import gui.panel;
 
 class Tetris : Panel
 {
@@ -105,7 +105,7 @@ class Tetris : Panel
 	
 	private void updateRender()
 	{
-		import gui.Font;
+		import gui.font;
 		import std.conv;
 		img.drawBoxFill(vec2(0,0),size, Color(100,100,100));
 		

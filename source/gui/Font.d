@@ -1,7 +1,7 @@
-﻿module gui.Font;
+﻿module gui.font;
 
-import graphics.Image;
-import graphics.Color;
+import graphics.image;
+import graphics.color;
 import math.matrix;
 
 private Image fontImg;

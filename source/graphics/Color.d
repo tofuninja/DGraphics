@@ -1,4 +1,4 @@
-﻿module graphics.Color;
+﻿module graphics.color;
 
 import std.traits;
 import math.matrix;
