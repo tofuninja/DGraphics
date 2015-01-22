@@ -762,7 +762,7 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
 	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
 	result[2,2] = -((farDist + nearDist) * oneOverDepth);
 	result[2,3] = ((2*farDist * nearDist) * oneOverDepth);
-	result[3,2] = 1;
+	result[3,2] = -1;
 	result[3,3] = 0;
 
 	return result;
