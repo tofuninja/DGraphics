@@ -6,7 +6,7 @@ import derelict.opengl3.gl3;
 import derelict.opengl3.gl;
 import derelict.freeimage.freeimage;
 import std.stdio; 
-import gui.Panel;
+import gui.panel;
 import gui.keyboard;
 
 // State
@@ -32,7 +32,7 @@ public void initializeGraphicsState(string[] args)
 
 	// set free image error handeler
 	{
-		import graphics.Image;
+		import graphics.image;
 		FreeImage_SetOutputMessage(&freeImgErrorHandler);
 	}
 
@@ -88,7 +88,7 @@ public void initializeGraphicsState(string[] args)
 
 
 	{ // Load font file
-		import gui.Font;
+		import gui.font;
 		initFont();
 	}
 
@@ -107,6 +107,7 @@ public struct TextureImageUnit
 {
 	import graphics.hw.texture;
 	private int loc = 0;
+	private GLenum prevType; 
 
 	private this(int bindLoc)
 	{
@@ -124,7 +125,14 @@ public struct TextureImageUnit
 	public void bind(Texture tex)
 	{
 		glActiveTexture(GL_TEXTURE0 + loc);
-		glBindTexture(tex.textureType, tex.id);
+		glBindTexture(tex.oglTextureType, tex.id);
+		prevType = tex.oglTextureType;
+	}
+
+	public void unbind()
+	{
+		glActiveTexture(GL_TEXTURE0 + loc);
+		glBindTexture(prevType, 0);
 	}
 }
 

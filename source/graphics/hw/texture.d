@@ -1,39 +1,99 @@
 ﻿module graphics.hw.texture;
 
+public enum TextureType
+{
+	RGBA,
+	Depth,
+}
+
 struct Texture
 {
 	import derelict.opengl3.gl3;
-	import graphics.Image;
+	import graphics.image;
 
 	public GLuint id = 0;
+	public int width = 0;
+	public int height = 0;
 
 	// TODO: Support other texture types
-	public GLenum textureType = GL_TEXTURE_2D;
+	public TextureType textureType;
+	public GLenum oglTextureType;
+	public GLenum partArangment;
+	public GLenum partType;
+	public GLenum min;
+	public GLenum mag;
 
 	public this(Image img)
 	{
-		setImage(img);
+		create(img);
+	}
+
+	public this(int w, int h, TextureType type = TextureType.RGBA)
+	{
+		create(w, h, type);
 	}
 
 	/**
 	 * Sets the texture image
 	 */
-	public void setImage(Image img)
+	public void create(Image img)
+	{
+		create(img.Width, img.Height, img.Data.ptr, TextureType.RGBA);
+	}
+
+	/**
+	 * Creates an empty texture
+	 */
+	public void create(int w, int h, TextureType type)
+	{
+		create(w,h,null, type);
+	}
+
+
+	private void create(int w, int h, void* p, TextureType type)
 	{
 		import util.debugger;
 		import std.stdio;
-		if(id == 0)
+
+		textureType = type;
+
+		destroy();
+		glGenTextures(1, &id);
+
+		width = w;
+		height = h;
+
+		bool genMip = false;
+
+		if(type == TextureType.RGBA)
 		{
-			glGenTextures(1, &id);
+			oglTextureType = GL_TEXTURE_2D;
+			partArangment = GL_RGBA;
+			partType = GL_UNSIGNED_BYTE;
+			mag = GL_LINEAR;
+			min = GL_LINEAR_MIPMAP_LINEAR;
+			genMip = true;
+
+		}
+		else if(type == TextureType.Depth)
+		{
+			oglTextureType = GL_TEXTURE_2D;
+			partArangment = GL_RED;
+			partType = GL_FLOAT;
+			mag = GL_LINEAR;
+			min = GL_LINEAR;
 		}
 
-		glBindTexture(GL_TEXTURE_2D, id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.Width, img.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.Data.ptr);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glBindTexture(oglTextureType, id);
+		glTexImage2D(oglTextureType, 0, partArangment, w, h, 0, partArangment, partType, p);
+		if(genMip) glGenerateMipmap(oglTextureType);
+		glTexParameteri(oglTextureType, GL_TEXTURE_MAG_FILTER, mag);
+		glTexParameteri(oglTextureType, GL_TEXTURE_MIN_FILTER, min);
+		glBindTexture(oglTextureType, 0);
+
 	}
+
 
 	/**
 	 * Deletes the texture data
@@ -45,6 +105,8 @@ struct Texture
 			glDeleteTextures(1, &id);
 		}
 		id = 0;
+		width = 0;
+		height = 0;
 	}
 }
 
