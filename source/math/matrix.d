@@ -64,7 +64,6 @@ struct matrix(int m, int n, T = float)
 	static assert(m > 0,"Row count must be greater than 0");
 	static assert(n > 0,"Column count must be greater than 0");
 
-	public enum iAmAMatrix = true;
 	public enum rows = m;
 	public enum columns = n;
 	public enum bool isVector = (columns == 1); // Vectors will always be column vectors
@@ -718,28 +717,15 @@ public auto rref(int m, int n, T)(matrix!(m,n,T) mat)
 			currentRow++;
 		}
 	}
-	
+
 	return augment;
 }
 
 /**
  * Constructs a 3d perspective projection matrix
  */
-auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=false)
+auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool leftHanded=true)
 {
-	//
-	// General form of the Projection Matrix
-	//
-	// uh = Cot( fov/2 ) == 1/Tan(fov/2)
-	// uw / uh = 1/aspect
-	// 
-	//   uw         0       0       0
-	//    0        uh       0       0
-	//    0         0      f/(f-n)  1
-	//    0         0    -fn/(f-n)  0
-	//
-	// check for bad parameters to avoid divide by zero:
-	// if found, assert and return an identity matrix.
 	assert(fov > 0, "Fov is less than or equals to zero");
 	assert(aspect != 0, "Aspect equals zero");
 	static assert(__traits(compiles, cast(real)T.init), "No cast from " ~ T.stringof ~ " to real");
@@ -749,20 +735,12 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
 	auto result = identity!(4,T);
 	T frustumDepth = farDist - nearDist;
 	T oneOverDepth = 1 / frustumDepth;
-	/*
-	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
-	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
-	result[2,2] = (farDist * oneOverDepth);
-	result[3,2] = ((-farDist * nearDist) * oneOverDepth);
-	result[2,3] = 1;
-	result[3,3] = 0;
-	*/
 
 	result[1,1] = cast(T)(1 / tan(0.5f * cast(real)fov));
 	result[0,0] = ((leftHanded ? 1 : -1 ) * result[1,1] / aspect);
-	result[2,2] = -((farDist + nearDist) * oneOverDepth);
-	result[2,3] = ((2*farDist * nearDist) * oneOverDepth);
-	result[3,2] = -1;
+	result[2,2] = ((farDist + nearDist) * oneOverDepth);
+	result[2,3] = -((2*farDist * nearDist) * oneOverDepth);
+	result[3,2] = 1;
 	result[3,3] = 0;
 
 	return result;
@@ -773,7 +751,8 @@ auto projectionMatrix(T=float)(T fov, T aspect, T nearDist, T farDist, bool left
  */
 mat4 viewMatrix(T=float)(matrix!(3,1,T) eye, matrix!(3,1,T) target, matrix!(3,1,T) up )
 {
-	auto zaxis = normalize(eye - target);		// The "forward" vector.
+
+	auto zaxis = normalize(target - eye);		// The "forward" vector.
 	auto xaxis = normalize(cross(up, zaxis));	// The "right" vector.
 	auto yaxis = cross(zaxis, xaxis);			// The "up" vector.
 	
@@ -809,12 +788,12 @@ auto quaternion(T=float)(matrix!(3,1,T) axis, T angle)
 
 auto length(int m, T)(matrix!(m,1,T) vec)
 {
-	return dot(vec,vec);
+	return sqrt(dot(vec,vec));
 }
 
 auto normalize(int m, T)(matrix!(m,1,T) vec)
 {
-	return vec/vec.length;
+	return vec/(vec.length);
 }
 
 /**
@@ -947,8 +926,8 @@ private auto arrayInit(int m, int n, T)(T v)
 
 template isMatrix(T)
 {
-	static if(__traits(hasMember, T, "iAmAMatrix")) enum isMatrix = true;
-	else enum isMatrix = false;
+	import std.traits;
+	enum isMatrix = isInstanceOf!(matrix, T);
 }
 
 auto modelMatrix(vec3 translation, vec3 rotation, vec3 scale)
