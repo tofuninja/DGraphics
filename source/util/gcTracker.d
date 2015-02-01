@@ -191,7 +191,7 @@ unittest {
 
 unittest {
 	clearAllocStats();
-	auto atr = allocsTracker();
+	auto atr = GCTracker();
 	assert(allocs_qsz == 0 && allocs_qc == 0);
 	auto arr = new int[32];
 	assert(allocs_qsz == 129 && allocs_qc == 1);
