@@ -16,7 +16,7 @@ public struct camera
 	public vec3 eye;
 	public vec3 rot;
 
-	public this(float fov, float aspect, float near = -1, float far = -100)
+	public this(float fov, float aspect, float near = 1, float far = 100)
 	{
 		this.fov = fov;
 		this.aspect = aspect;
@@ -33,7 +33,7 @@ void invalidate(ref camera c)
 {
 	auto rotMat = rotationMatrix(c.rot);
 	c.projMatrix = projectionMatrix(c.fov/c.zoom, c.aspect, c.near, c.far);
-	c.viewMatrix = viewMatrix(c.eye, c.eye + (rotMat*vec4(0,0,-1,1)).xyz, (rotMat*vec4(0,1,0,1)).xyz);
+	c.viewMatrix = viewMatrix(c.eye, c.eye + (rotMat*vec4(0,0,1,1)).xyz, (rotMat*vec4(0,1,0,1)).xyz);
 }
 
 camera lerp(camera c1, camera c2, float p)
