@@ -5,10 +5,10 @@
 	"authors": ["Snuffy"],
 	"dependencies": 
 	{
-		"derelict-glfw3": ">=1.0.0",
-		"derelict-gl3": ">=1.0.12",
-		"derelict-fi": ">=1.9.0",
-		"pegged": ">=0.1.0" 
+		"derelict-glfw3": "==1.1.0",
+		"derelict-gl3": "==1.0.12",
+		"derelict-fi": "==1.9.0",
+		"pegged": "==0.1.0" 
 	}
 }
  
