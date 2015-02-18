@@ -308,6 +308,10 @@ public struct ShaderInput
 {
 	public ShaderProgram program;
 	public GLuint id = 0;
+	public int vertexOffset = 0;
+	public int vertexCount = 0;
+
+	private bool indexBufferAttached = false;
 
 	public this(ShaderProgram shaderProg)
 	{
@@ -319,6 +323,9 @@ public struct ShaderInput
 		if(id != 0) glDeleteVertexArrays(1, &id);
 		id = 0;
 		program = ShaderProgram.init;
+		indexBufferAttached = false;
+		vertexCount = 0;
+		vertexOffset = 0;
 	}
 
 	void setShaderProgram(ShaderProgram shaderProg)
@@ -328,19 +335,31 @@ public struct ShaderInput
 		glGenVertexArrays(1, &id);
 	}
 
+
+	public void draw()
+	{
+		draw(vertexOffset, vertexCount);
+	}
+
 	public void draw(int start, int count)
 	{
-		import std.stdio;
-		glUseProgram(program.id);
-		glBindVertexArray(id);
-		glDrawArrays(GL_TRIANGLES, start, count);
-		glBindVertexArray(0);
-		glUseProgram(0);
+
+		if(indexBufferAttached) 
+		{
+			drawIndexed(start, count);
+		}
+		else
+		{
+			glUseProgram(program.id);
+			glBindVertexArray(id);
+			glDrawArrays(GL_TRIANGLES, start, count);
+			glBindVertexArray(0);
+			glUseProgram(0);
+		}
 	}
 	
-	public void drawIndexed(int start, int count)
+	private void drawIndexed(int start, int count)
 	{
-		import std.stdio;
 		glUseProgram(program.id);
 		glBindVertexArray(id);
 		glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, cast(void*)(start*uint.sizeof));
@@ -350,15 +369,22 @@ public struct ShaderInput
 
 	public void attachIndexBuffer(IndexBuffer buf)
 	{
+		vertexCount = buf.size*3;
 		glBindVertexArray(id);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.id);
 		glBindVertexArray(0);
+		indexBufferAttached = true;
 	}
 
 	public void attachBuffer(V : VertexBuffer!(T), T)(V vbo)
 	{
 		import std.traits;
 		import std.stdio;
+
+		// Simply takes the size of the most reccently attached buffer...
+		// If buffers size mismatch then manual intervention will be needed 
+		// TODO: make this smarter
+		if(!indexBufferAttached) vertexCount = vbo.size;
 
 		glBindVertexArray(id);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo.id);
