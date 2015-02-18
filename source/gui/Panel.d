@@ -486,15 +486,30 @@ class label : Panel
 	public this(vec2 loc, string txt, Panel owner)
 	{
 		super(loc, txt.renderSize + vec2(boarder*2,boarder*2), owner);
-
-		img.clear(Color(0));
-		img.drawRoundedRectangleFill(vec2(0, 0), size, r, color);
-		img.drawRoundedRectangle(vec2(0, 0), size, r, Color(0,0,0));
-		img.drawText(txt, vec2(boarder,boarder),  Color(0,0,0));
+		setText(txt);
 	}
 	
 	public this(vec2 loc, string txt)
 	{
 		this(loc, txt, basePan);
+	}
+
+	public this(vec2 loc, vec2 size, Panel owner)
+	{
+		super(loc, size, owner);
+		setText("");
+	}
+	
+	public this(vec2 loc, vec2 size)
+	{
+		this(loc, size, basePan);
+	}
+
+	public void setText(string text)
+	{
+		img.clear(Color(0));
+		img.drawRoundedRectangleFill(vec2(0, 0), size, r, color);
+		img.drawRoundedRectangle(vec2(0, 0), size, r, Color(0,0,0));
+		img.drawText(text, vec2(boarder,boarder),  Color(0,0,0));
 	}
 }
