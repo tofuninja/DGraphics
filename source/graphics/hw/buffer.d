@@ -75,7 +75,7 @@ public struct VertexBuffer(T)
 			glGenBuffers(1,&id);
 		}
 
-		size = data.length;
+		size = cast(int)data.length;
 		glBindBuffer(GL_ARRAY_BUFFER, id); 
 		glBufferData(GL_ARRAY_BUFFER, size * T.sizeof, data.ptr, usage);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -150,7 +150,7 @@ public struct IndexBuffer
 			glGenBuffers(1,&id);
 		}
 		
-		size = data.length;
+		size = cast(int)data.length;
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id); 
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, size * uvec3.sizeof, data.ptr, usage);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

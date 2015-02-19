@@ -195,19 +195,26 @@ Image loadImage(T)(T path) if(is(T == string) || is(T == wstring) || is(T == dst
 	import std.string;
 	import std.conv;
 
-	wstring wpath = wtext(path~'\0');
+	version(Windows)
+	{
+		wstring p = wtext(path~'\0');
+	}
+	else
+	{
+		dstring p = dtext(path~'\0');
+	}
 
 
 	// Get image file type
-	FREE_IMAGE_FORMAT fileFormat = FreeImage_GetFileTypeU(wpath.ptr, 0);
+	FREE_IMAGE_FORMAT fileFormat = FreeImage_GetFileTypeU(p.ptr, 0);
 	if(fileFormat == FIF_UNKNOWN)
-		fileFormat = FreeImage_GetFIFFromFilenameU(wpath.ptr);
+		fileFormat = FreeImage_GetFIFFromFilenameU(p.ptr);
 	if(fileFormat == FIF_UNKNOWN) throw new Exception("Unknown file type");
 
 	// Load image
 	int flags = 0;
 	if(fileFormat == FIF_JPEG) flags = JPEG_ACCURATE;
-	FIBITMAP* img = FreeImage_LoadU(fileFormat, wpath.ptr, flags);
+	FIBITMAP* img = FreeImage_LoadU(fileFormat, p.ptr, flags);
 	if(img is null) throw new Exception("Image " ~ path ~ " failed to load");
 
 
@@ -312,66 +319,80 @@ Image convolve(int n)(Image img, matrix!(n,n, float) kernal)
 
 bool loadImageDialog(ref Image img)
 {
-	import core.sys.windows.windows;
-	import std.string;
+	version(Windows)
+	{
+		import core.sys.windows.windows;
+		import std.string;
 
-	int rtn;
-	OPENFILENAMEA file;
-	
-	file.lStructSize = OPENFILENAMEA.sizeof;
-	file.hwndOwner = null;
-	file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
-	file.lpstrCustomFilter = null;
-	file.nFilterIndex = 1;
-	char[1000] buffer;
-	buffer[0] = 0;
-	file.lpstrFile = buffer.ptr;
-	file.nMaxFile = 1000;
-	file.nMaxFileTitle = 0;
-	file.lpstrInitialDir = null;
-	file.lpstrTitle = null;
-	file.Flags = 0;
-	
-	rtn = GetOpenFileNameA(&file);
-	if(rtn == 0) return false;
-	
-	int z;
-	for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
-	string filename = buffer[0 .. z].idup;
-	img = loadImage(filename);
-	return true;
+		int rtn;
+		OPENFILENAMEA file;
+		
+		file.lStructSize = OPENFILENAMEA.sizeof;
+		file.hwndOwner = null;
+		file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
+		file.lpstrCustomFilter = null;
+		file.nFilterIndex = 1;
+		char[1000] buffer;
+		buffer[0] = 0;
+		file.lpstrFile = buffer.ptr;
+		file.nMaxFile = 1000;
+		file.nMaxFileTitle = 0;
+		file.lpstrInitialDir = null;
+		file.lpstrTitle = null;
+		file.Flags = 0;
+		
+		rtn = GetOpenFileNameA(&file);
+		if(rtn == 0) return false;
+		
+		int z;
+		for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
+		string filename = buffer[0 .. z].idup;
+		img = loadImage(filename);
+		return true;
+	}
+	else
+	{
+		throw new Exception("Only supported on windows");
+	}
 }
 
 bool saveImageDialog(Image img)
 {
-	import core.sys.windows.windows;
-	import std.string;
+	version(Windows)
+	{
+		import core.sys.windows.windows;
+		import std.string;
 
-	int rtn;
-	OPENFILENAMEA file;
-	
-	file.lStructSize = OPENFILENAMEA.sizeof;
-	file.hwndOwner = null;
-	file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
-	file.lpstrCustomFilter = null;
-	file.nFilterIndex = 1;
-	char[1000] buffer;
-	buffer[0] = 0;
-	file.lpstrFile = buffer.ptr;
-	file.nMaxFile = 1000;
-	file.nMaxFileTitle = 0;
-	file.lpstrInitialDir = null;
-	file.lpstrTitle = null;
-	file.Flags = 0;
-	
-	rtn = GetSaveFileNameA(&file);
-	if(rtn == 0) return false;
-	
-	int z;
-	for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
-	string filename = buffer[0 .. z].idup;
-	saveImage(img, filename);
-	return true;
+		int rtn;
+		OPENFILENAMEA file;
+		
+		file.lStructSize = OPENFILENAMEA.sizeof;
+		file.hwndOwner = null;
+		file.lpstrFilter = "Image\0*.tif;*.tiff;*.jpg;*.jpeg;*.png\0\0".toStringz;
+		file.lpstrCustomFilter = null;
+		file.nFilterIndex = 1;
+		char[1000] buffer;
+		buffer[0] = 0;
+		file.lpstrFile = buffer.ptr;
+		file.nMaxFile = 1000;
+		file.nMaxFileTitle = 0;
+		file.lpstrInitialDir = null;
+		file.lpstrTitle = null;
+		file.Flags = 0;
+		
+		rtn = GetSaveFileNameA(&file);
+		if(rtn == 0) return false;
+		
+		int z;
+		for(z = 0; buffer[z] != 0 && z < 1000; z++) {}
+		string filename = buffer[0 .. z].idup;
+		saveImage(img, filename);
+		return true;
+	}
+	else
+	{
+		throw new Exception("Only supported on windows");
+	}
 }
 
 void drawImage(Image dest, Image src, vec2 loc)

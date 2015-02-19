@@ -229,7 +229,7 @@ public struct ShaderProgram
 		
 		
 		const GLenum properties[4] = [GL_BLOCK_INDEX, GL_TYPE, GL_NAME_LENGTH, GL_LOCATION];
-		for(int unif = 0; unif < numUniforms; unif++)
+		for(uint unif = 0; unif < numUniforms; unif++)
 		{
 			GLint values[4];
 			glGetProgramResourceiv(id, GL_UNIFORM, unif, 4, properties.ptr, 4, null, values.ptr);
@@ -242,7 +242,7 @@ public struct ShaderProgram
 			GLint loc = values[3];						// uniform location
 			int tag = 0; 								// uniform tag to add any extrea info to the uniform
 			
-			glGetProgramResourceName(id, GL_UNIFORM, unif, uniformName.length, null, uniformName.ptr);
+			glGetProgramResourceName(id, GL_UNIFORM, unif, cast(int)uniformName.length, null, uniformName.ptr);
 			uniformName.length--; // We dont need the terminating zero, this is D!
 			uniforms[uniformName.idup] = ShaderUniformInfo(type, loc, tag);
 		}
@@ -260,7 +260,7 @@ public struct ShaderProgram
 		glGetProgramInterfaceiv(id, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES, &numIns);
 		
 		const GLenum properties[4] = [GL_TYPE, GL_NAME_LENGTH, GL_LOCATION, GL_ARRAY_SIZE];
-		for(int input = 0; input < numIns; input++)
+		for(uint input = 0; input < numIns; input++)
 		{
 			GLint values[4];
 			glGetProgramResourceiv(id, GL_PROGRAM_INPUT, input, 4, properties.ptr, 4, null, values.ptr);
@@ -271,7 +271,7 @@ public struct ShaderProgram
 			GLint arraySize = values[3];				// input array size
 			int tag = 0; 								// input tag to add any extrea info to the input
 			
-			glGetProgramResourceName(id, GL_PROGRAM_INPUT, input, inputName.length, null, inputName.ptr);
+			glGetProgramResourceName(id, GL_PROGRAM_INPUT, input, cast(int)inputName.length, null, inputName.ptr);
 			inputName.length--; // We dont need the terminating zero, this is D!
 			inputs[inputName.idup] = ShaderInputInfo(type, loc, arraySize, tag);
 		}
