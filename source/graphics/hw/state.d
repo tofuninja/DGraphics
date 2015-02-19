@@ -5,9 +5,9 @@ import derelict.glfw3.glfw3;
 import derelict.opengl3.gl3;
 import derelict.opengl3.gl;
 import derelict.freeimage.freeimage;
-import std.stdio; 
 import gui.panel;
-import gui.keyboard;
+import std.stdio; 
+
 
 // State
 private int texUnitCount;
@@ -27,8 +27,17 @@ public void initializeGraphicsState(string[] args)
 	/* Initialize the librarys */
 	DerelictGL.load();
 	DerelictGL3.load();
-	DerelictGLFW3.load();
-	DerelictFI.load();
+
+	version(Windows)
+	{
+		DerelictGLFW3.load(["./libs/glfw3.dll"]);
+		DerelictFI.load(["./libs/Freeimage.dll"]);
+	}
+	version(linux)
+	{
+		DerelictGLFW3.load(["./libs/libglfw3.so"]);
+		DerelictFI.load(["./libs/libfreeimage.so"]);
+	}
 
 	// set free image error handeler
 	{
@@ -36,17 +45,19 @@ public void initializeGraphicsState(string[] args)
 		FreeImage_SetOutputMessage(&freeImgErrorHandler);
 	}
 
+
 	// Grab current directory
 	{
 		import std.file;
 		baseDirectory = getcwd();
 	}
 
-	
-	if (!glfwInit()) return;
-	
-	// Create a windowed mode window and its OpenGL context 
 
+	// Start GLFW3
+	if (!glfwInit()) return;
+
+
+	// Create a windowed mode window and its OpenGL context 
 	glfwWindowHint(GLFW_RESIZABLE, 0);
 	window = glfwCreateWindow(windowW, windowH, "Hello World", null, null);
 	//scope(exit) glfwTerminate();
@@ -55,16 +66,21 @@ public void initializeGraphicsState(string[] args)
 	DerelictGL3.reload();
 	DerelictGL.reload();
 
-	debug writeln("OpenGl Version: ", DerelictGL3.loadedVersion);
+
+	debug
 	{
 		import std.conv;
+
+		// print ogl version
+		writeln("OpenGl Version: ", DerelictGL3.loadedVersion);
+
+		// print free image version
 		auto fiv = FreeImage_GetVersion();
 		int z;
 		for(z = 0; fiv[z] != 0; z++) {}
 		auto ver = fiv[0 .. z].to!string;
-		debug writeln("FreeImage Version: ", ver);
+		writeln("FreeImage Version: ", ver);
 	}
-	setUpKeyboard();
 
 
 	// Enforce required gl
@@ -76,23 +92,32 @@ public void initializeGraphicsState(string[] args)
 	}
 
 
+	// Set up texture units 
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &texUnitCount);
-
 	TextureBindPoints = new TextureImageUnit[texUnitCount];
 	foreach(int i; 0 .. texUnitCount)
 	{
 		TextureBindPoints[i] = TextureImageUnit(i);
 	}
-
 	debug writeln("Texture Unit Count: ", texUnitCount);
 
 
-	{ // Load font file
-		import gui.font;
-		initFont();
+	// Load all shaders
+	{
+		import resources.glslManager;
+		compileShaders();
 	}
 
-	basePan = new BasePanel(windowW,windowH);
+
+	// Set up gui
+	{
+		import gui.keyboard;
+		import gui.panel;
+		import gui.font;
+		setUpKeyboard();
+		initFont();
+		basePan = new BasePanel(windowW,windowH);
+	}
 }
 
 /**
