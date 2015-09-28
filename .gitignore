@@ -1,13 +1,4 @@
-bin/dgraphics.exe
-.dub/build/application-debug-windows-x86-dmd-050003BAEC5754FBB5AA78E74030635C/dgraphics.exe
-.dub/build/application-debug-windows-x86-dmd-050003BAEC5754FBB5AA78E74030635C/dgraphics.obj
-*.obj
 *.exe
-bin/formatedTrace.txt
-bin/trace.def
-bin/trace.log
 dub.userprefs
-*.lib
-.dub/dub.json
 dub.selections.json
 .dub/*
