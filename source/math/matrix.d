@@ -934,3 +934,8 @@ auto modelMatrix(vec3 translation, vec3 rotation, vec3 scale)
 {
 	return translationMatrix(translation)*rotationMatrix(rotation)*scalingMatrix(scale);
 }
+
+public void testPROC()
+{
+	
+}
