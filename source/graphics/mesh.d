@@ -1,536 +1,345 @@
-﻿module graphics.mesh;
+module graphics.mesh;
+
+import editor.io;
+import derelict.assimp3.assimp;
 import math.matrix;
-import graphics.color;
-import graphics.camera;
-import graphics.image;
-import graphics.hw.shader;
-import graphics.hw.buffer;
-
-// TODO: turn model into a carrier system for shader inputs + uniforms.... 
-// Basicly what I am thinking of is a way to combine a set of vertex data with a set of uniforms... 
+import math.geo.rectangle;
+import container.clist;
+import graphics.hw.game;
 
 
-/*
- * A model in world space
- * Has a shaderInput(usually obtained from a mesh), texture, and a modelMatrix
- * 
- */
-public struct model
+// To simplify things, we will only be focusing on the meshes inside of a scene
+// We will not be supporting complex scenes defined in the asset files
+// Basicly the assimp scene node heirarchy will be ignored
+// If an asset file has more then one mesh, then they are considered to be seperate and unrelated
+// That way what we get from loading an asset is just a list of meshes
+// The assimp scene system is not helpful for our needs
+
+
+class Mesh
 {
-	// Rotation, translation and scaling are all handeled by the model matrix
-	public mat4 modelMatrix;
-	public ShaderInput shaderInput;
-	public Image texture; 
-
-	public this(ShaderInput input)
+	public struct Vector
 	{
-		shaderInput = input;
-		modelMatrix = identity!4;
-		texture = null;
+		@attachmentLocation(0) vec3 location;
+		@attachmentLocation(1) vec3 normal;
+		@attachmentLocation(2) vec2 uv;
 	}
 
-	public this(ShaderInput input, Image tex)
+	public string name;
+	public uint vectorCount;
+	public uint indexCount;
+	private bufferRef vec;
+	private bufferRef index;
+
+	public this(string name, Vector[] vectors, uvec3[] indices)
 	{
-		this(input);
-		texture = tex;
+		this.name = name;
+		vectorCount = vectors.length;
+		indexCount = indices.length*3;
+
+		// Create vec buffer
+		{
+			auto info 		= bufferCreateInfo();
+			info.size 		= (Vector.sizeof)*vectors.length;
+			info.dynamic 	= false;
+			info.data 		= vectors;
+			vec 			= Game.createBuffer(info);
+		}
+
+		// Create index buffer
+		{
+			auto info 		= bufferCreateInfo();
+			info.size 		= (uvec3.sizeof)*indices.length;
+			info.dynamic 	= false;
+			info.data 		= indices;
+			index 			= Game.createBuffer(info);
+		}
+	}
+
+	public ~this()
+	{
+		Game.destroyBuffer(vec);
+		Game.destroyBuffer(index);
 	}
 }
 
-/*
- * Represents a mesh of triangles
- * 
- */
-public class mesh
+Mesh[] loadMeshAsset(string file)
 {
-	public vec3[] vectors;
-	public vec3[] colors;
-	public vec3[] normals;
-	public vec2[] texCords;
-	public uvec3[] indices;
+	import std.string;
+	import std.path;
+	import std.conv;
 
-	public VertexBuffer!vec3 vectorsBuffer;
-	public VertexBuffer!vec3 colorsBuffer;
-	public VertexBuffer!vec3 normalsBuffer;
-	public VertexBuffer!vec2 texCordsBuffer;
-	public IndexBuffer indicesBuffer;
+	// Load mesh from file with assimp
+	const aiScene* scene = aiImportFile( ("./assets/meshes/" ~ file).toStringz(), 
+		aiProcess_GenNormals			|
+		aiProcess_OptimizeMeshes		| 
+		aiProcess_OptimizeGraph			|
+		aiProcess_Triangulate			|
+		aiProcess_JoinIdenticalVertices	|
+		aiProcess_SortByPType);
 
-	public bool buffersGenerated = false;
-
-	public this(vec3[] vecs, vec3[] cols, vec3[] norms, vec2[] tex, uvec3[] index)
+	// If the import failed, throw
+	if(!scene)
 	{
-		vectors = vecs;
-		colors = cols;
-		normals = norms;
-		texCords = tex;
-		indices = index;
-
-
-		vec3 lowerBound;
-		vec3 upperBound;
-		vec3 center;
-
-		void calcBounds()
-		{
-			import std.algorithm;
-			lowerBound = vectors[0];
-			upperBound = vectors[0];
-			foreach(vec3 v; vectors)
-			{
-				lowerBound.x = min(lowerBound.x, v.x);
-				lowerBound.y = min(lowerBound.y, v.y);
-				lowerBound.z = min(lowerBound.z, v.z);
-				upperBound.x = max(upperBound.x, v.x);
-				upperBound.y = max(upperBound.y, v.y);
-				upperBound.z = max(upperBound.z, v.z);
-			}
-			
-			center = (upperBound + lowerBound)/2.0f;
-		}
-
-		void normilizeME()
-		{
-			auto size = (upperBound - lowerBound)/2;
-			for(int i = 0; i < vectors.length; i++)
-			{
-				vectors[i] = (vectors[i] - center)/size;
-			}
-			center = vec3(0,0,0);
-			lowerBound = vec3(-1,-1,-1);
-			lowerBound = vec3(1,1,1);
-		}
-
-		calcBounds();
-		normilizeME();
+		string error = fromStringz(aiGetErrorString()).idup;
+		throw new Exception(error);
 	}
 
-	// Generate vertex buffers
-	public void generateBuffers()
+	scope(exit) aiReleaseImport(scene);
+	// Now we are free to access the scene
+	Mesh[] ret = new Mesh[scene.mNumMeshes];
+	string name = file.stripExtension;
+
+	for(int i = 0; i < scene.mNumMeshes; i++)
 	{
-		if(buffersGenerated) deleteBuffers();
+		const aiMesh* m = scene.mMeshes[i];
 
-		vectorsBuffer = VertexBuffer!vec3(vectors, "pos");
-		colorsBuffer = VertexBuffer!vec3(colors, "col");
-		normalsBuffer = VertexBuffer!vec3(normals, "norm");
-		texCordsBuffer = VertexBuffer!vec2(texCords, "uv");
-		indicesBuffer = IndexBuffer(indices);
+		bool hasUV = (m.mNumUVComponents[0] == 2);
 
-		buffersGenerated = true;
-	}
+		// Get name
+		string meshName;
+		if(scene.mNumMeshes == 1)
+			meshName = name;
+		else if(m.mName.length == 0) 
+			meshName = name ~ "/" ~ i.to!string;
+		else
+			meshName = name ~ "/" ~ ai2s(m.mName).idup; 
 
-	// Delete vertex buffers
-	public void deleteBuffers()
-	{
-		if(!buffersGenerated) return;
-
-		vectorsBuffer.destroy();
-		colorsBuffer.destroy();
-		normalsBuffer.destroy();
-		texCordsBuffer.destroy();
-		indicesBuffer.destroy();
-
-		buffersGenerated = false;
-	}
-}
-
-/**
- * Cunstruct an axis aligned box
- */
-public mesh boxMesh()
-{
-	vec3[] vecs = new vec3[8];
-	vec3[] vcols = new vec3[8];
-	vec3[] norms = new vec3[8];
-	vec2[] uvArr = new vec2[8];
-	uvec3[] index = new uvec3[6*2];
-
-	// box verts 
-	vecs[0] = vec3(-1, 1, 1);
-	vecs[1] = vec3( 1, 1, 1);
-	vecs[2] = vec3(-1,-1, 1);
-	vecs[3] = vec3( 1,-1, 1);
-	vecs[4] = vec3(-1, 1,-1);
-	vecs[5] = vec3( 1, 1,-1);
-	vecs[6] = vec3(-1,-1,-1);
-	vecs[7] = vec3( 1,-1,-1);
-
-	// box colors
-	vcols[] = vec3(1,1,1);
-
-
-	// box normals
-	for(int i = 0; i < 8; i++)
-	{
-		norms[i] = normalize(vecs[i]);
-	}
-
-	// box texCords
-	enum scale = 1;
-	uvArr[0] = vec2(0,0);
-	uvArr[1] = vec2(scale,0);
-	uvArr[2] = vec2(0,scale);
-	uvArr[3] = vec2(scale,scale);
-	uvArr[4] = vec2(scale,scale);
-	uvArr[5] = vec2(0,scale);
-	uvArr[6] = vec2(scale,0);
-	uvArr[7] = vec2(0,0);
-
-	// box indecies
-	index[0] = uvec3(0,2,3);
-	index[1] = uvec3(3,1,0);
-	index[2] = uvec3(1,3,7);
-	index[3] = uvec3(7,5,1);
-	index[4] = uvec3(0,1,5);
-	index[5] = uvec3(5,4,0);
-	index[6] = uvec3(7,4,5);
-	index[7] = uvec3(7,6,4);
-	index[8] = uvec3(4,6,0);
-	index[9] = uvec3(6,2,0);
-	index[10] = uvec3(6,7,2);
-	index[11] = uvec3(2,7,3);
-
-	return new mesh(vecs, vcols, norms, uvArr, index);
-}
-
-// Todo: fix spere and cylinder mesh generators
-/*
-public mesh sphereMesh()
-{
-	import std.math;
-	enum rowCount = 10;
-	enum rowRes = 10;
-	enum twoPi = PI*2;
-
-	int pointCount = (rowRes)*(rowCount - 2) + 2;
-	int triCount = 2*rowRes*(rowCount - 2);
-
-	vec3[] vecs = new vec3[pointCount];
-	uvec3[] index = new uvec3[triCount];
-
-	// Generate points
-	int k = 0;
-	for(float i = 0; i < rowCount; i++)
-	{
-
-		for(float j = 0; j < rowRes; j++)
-		{
-			vecs[k] = vec3(sin((j/rowRes)*twoPi)*sin((i/(rowCount - 1))*PI), cos((i/(rowCount - 1))*PI), cos((j/rowRes)*twoPi)*sin((i/(rowCount - 1))*PI));
-			k++;
-			if(i == 0 || i == rowCount - 1) break;
-		}
-	}
-
-	// Connect points into tris
-	k = 0;
-	for(int i = 0; i < rowRes; i++)
-	{
-		index[k] = uvec3(0, i + 1, (i + 1)%rowRes + 1); 
-		k++;
-	}
-
-	for(int i = 1; i < rowCount - 2; i++)
-	{
-		for(int j = 0; j < rowRes; j++)
-		{
-			uint  p0 = (i - 1)*rowRes + 1 + j;
-			uint  p1 = (i - 1)*rowRes + 1 + (j + 1)%rowRes;
-			uint  p2 = i*rowRes + 1 + j;
-			uint  p3 = i*rowRes + 1 + (j + 1)%rowRes;
-
-			index[k] = uvec3(p0,p1,p2);
-			index[k + 1] = uvec3(p2,p1,p3);
-			k += 2;
-		}
-	}
-
-	for(int i = 0; i < rowRes; i++)
-	{
-		index[k] = uvec3(pointCount - 1,pointCount - i - 2, pointCount - (i + 1)%rowRes - 2); 
-		k++;
-	}
-
-	return new mesh(vecs, index);
-}
-
-
-mesh cylinderMesh()
-{
-	import std.math;
-	enum rowRes = 10;
-	enum twoPi = PI*2;
-	int pointCount = rowRes*2 + 2;
-	int triCount = 4*rowRes;
-
-	vec3[] vecs = new vec3[pointCount];
-	uvec3[] index = new uvec3[triCount];
-	
-	// Generate points
-	int k = 1;
-	vecs[0] = vec3(0,1,0);
-	for(float i = 0; i < 2; i++)
-	{
-		for(float j = 0; j < rowRes; j++)
-		{
-			vecs[k] = vec3(sin((j/rowRes)*twoPi), 1 - (i*2), cos((j/rowRes)*twoPi));
-			k++;
-		}
-	}
-	vecs[k] = vec3(0,-1,0);
-
-	// Connect points into tris
-	k = 0;
-	for(int i = 0; i < rowRes; i++)
-	{
-		index[k] = uvec3(0, i + 1, (i + 1)%rowRes + 1); 
-		k++;
-	}
-
-	for(int j = 0; j < rowRes; j++)
-	{
-		int i = 1;
-		uint  p0 = (i - 1)*rowRes + 1 + j;
-		uint  p1 = (i - 1)*rowRes + 1 + (j + 1)%rowRes;
-		uint  p2 = i*rowRes + 1 + j;
-		uint  p3 = i*rowRes + 1 + (j + 1)%rowRes;
+		// Get the faces, because of aiProcess_Triangulate, can assume the faces are triangles(i hope)
+		auto index = new uvec3[m.mNumFaces];
+		for(int j = 0; j < m.mNumFaces; j++) 
+			index[j] = uvec3(m.mFaces[j].mIndices[0], m.mFaces[j].mIndices[1], m.mFaces[j].mIndices[2]);
 		
-		index[k] = uvec3(p0,p1,p2);
-		index[k + 1] = uvec3(p2,p1,p3);
-		k += 2;
+		// Get the verticies 
+		auto vec = new Mesh.Vector[m.mNumVertices];
+		for(int j = 0; j < m.mNumVertices; j++)
+		{
+			Mesh.Vector v;
+			v.location = vec3(m.mVertices[j].x, m.mVertices[j].y, m.mVertices[j].z);
+			v.normal = vec3(m.mNormals[j].x, m.mNormals[j].y, m.mNormals[j].z);
+			if(hasUV) v.uv = vec2(m.mTextureCoords[0][j].x, m.mTextureCoords[0][j].y);
+			else v.uv = vec2(0,0);
+			vec[j] = v;
+		}
+
+		ret[i] = new Mesh(name, vec, index);
 	}
 	
-	for(int i = 0; i < rowRes; i++)
-	{
-		index[k] = uvec3(pointCount - 1,pointCount - i - 2, pointCount - (i + 1)%rowRes - 2); 
-		k++;
-	}
-
-	return new mesh(vecs, index);
+	return ret;
 }
-*/
 
-
-// TODO: fix it or remove it, model no longer works how this expects it... maybe there needs to be a seperation between a hw model and a sw model... 
-/*
-public void drawWireModel(Image img, model m, camera c)
+private const(char)[] ai2s(const ref aiString s)
 {
-	import graphics.render;
-	auto mvp = c.projMatrix*c.viewMatrix*m.modelMatrix;
+	return s.data[0 .. s.length];
+}
 
-	// No conectivity data, just render as a point cloud 
-	if(m.meshData.indices is null)
+
+//	  _____                       _    _       _  __                         
+//	 / ____|                     | |  | |     (_)/ _|                        
+//	| (___   ___ ___ _ __   ___  | |  | |_ __  _| |_ ___  _ __ _ __ ___  ___ 
+//	 \___ \ / __/ _ \ '_ \ / _ \ | |  | | '_ \| |  _/ _ \| '__| '_ ` _ \/ __|
+//	 ____) | (_|  __/ | | |  __/ | |__| | | | | | || (_) | |  | | | | | \__ \
+//	|_____/ \___\___|_| |_|\___|  \____/|_| |_|_|_| \___/|_|  |_| |_| |_|___/
+//	                                                                         
+//	                                                                         
+class SceneUniforms
+{
+	public struct uniformData
 	{
-		drawPoints(img, m, c);
-		return;
+		mat4 projection;
+	}
+	public bufferRef buffer;
+	public uniformData data;
+	alias data this;
+
+	public this()
+	{
+		auto info 		= bufferCreateInfo();
+		info.size 		= (uniformData.sizeof);
+		info.dynamic 	= true;
+		info.data 		= null;
+		buffer 			= Game.createBuffer(info);
 	}
 
-	foreach(uvec3 tri; m.meshData.indices)
+	public ~this()
 	{
-		vec4 p0;
-		vec4 p1;
-		vec4 p2;
+		Game.destroyBuffer(buffer);
+	}
 
-		p0.xyz = m.meshData.vectors[tri[0]];
-		p1.xyz = m.meshData.vectors[tri[1]];
-		p2.xyz = m.meshData.vectors[tri[2]];
+	public void update()
+	{
+		bufferSubDataInfo info;
+		uniformData[1] d = data;
+		info.data = d;
+		buffer.subData(info);
+	}
+}
 
-		p0.w = 1;
-		p1.w = 1;
-		p2.w = 1;
 
-		p0 = mvp*p0;
-		p1 = mvp*p1;
-		p2 = mvp*p2;
 
-		p0 = p0 / p0.w;
-		p1 = p1 / p1.w;
-		p2 = p2 / p2.w;
 
-		auto size = vec2(img.Width, img.Height);
-		size = size/2.0f;
+//	 __  __           _       ____        _       _     _             
+//	|  \/  |         | |     |  _ \      | |     | |   (_)            
+//	| \  / | ___  ___| |__   | |_) | __ _| |_ ___| |__  _ _ __   __ _ 
+//	| |\/| |/ _ \/ __| '_ \  |  _ < / _` | __/ __| '_ \| | '_ \ / _` |
+//	| |  | |  __/\__ \ | | | | |_) | (_| | || (__| | | | | | | | (_| |
+//	|_|  |_|\___||___/_| |_| |____/ \__,_|\__\___|_| |_|_|_| |_|\__, |
+//	                                                             __/ |
+//	                                                            |___/ 
 
-		void plotLine(vec4 v0, vec4 v1, Color col)
+private enum batchSize = 1024;
+private bool batcherInted = false;
+private bufferRef instanceBuffer;
+private vaoRef vao;
+private shaderRef shade;
+
+public struct MeshBatch
+{
+	public CList!(MeshInstance*) instances;
+	public Mesh mesh;
+	public this(Mesh m)
+	{
+		mesh = m;
+	}
+
+	public void insert(ref MeshInstance m)
+	{
+		m.node = &m;
+		instances.insert(m.node);
+	}
+
+	public void removeNode(ref MeshInstance m)
+	{
+		instances.removeNode(m.node);
+	}
+
+	public void runBatch(SceneUniforms uniforms, iRectangle viewport, fboRef fbo) 
+	{
+		initBatcher();
+		if(mesh is null) return;
+		// Iterate the instances and draw each one
+		instanceVector[batchSize] tempData;
+
+		renderStateInfo state;
+		state.mode = renderMode.triangles; 
+		state.vao = vao;
+		state.shader = shade;
+		state.viewport = viewport;
+		state.fbo = fbo;
+		state.depthTest = true;
+		state.depthFunction = cmpFunc.less;
+		state.backFaceCulling = true;
+		state.frontOrientation = frontFaceMode.clockwise;
+		Game.cmd(state);
+		
+		vboCommand bind0;
+		bind0.location = 0;
+		bind0.vbo = mesh.vec;
+		bind0.stride = Mesh.Vector.sizeof;
+		Game.cmd(bind0);
+
+		vboCommand bind1;
+		bind1.location = 1;
+		bind1.vbo = instanceBuffer;
+		bind1.stride = instanceVector.sizeof;
+		Game.cmd(bind1);
+
+		iboCommand bind2;
+		bind2.ibo = mesh.index;
+		Game.cmd(bind2);
+
+		uboCommand bind3;
+		bind3.location = 0;
+		bind3.size = SceneUniforms.uniformData.sizeof;
+		bind3.ubo = uniforms.buffer;
+		Game.cmd(bind3);
+
+		void flushBatch(int count)
 		{
-			if((v0.z > -1 && v0.z < 1) && (v1.z > -1 && v1.z < 1))
+			bufferSubDataInfo sub;
+			sub.data = tempData[0..count];
+			sub.offset = 0;
+			instanceBuffer.subData(sub);
+
+			drawIndexedCommand draw;
+			draw.vertexCount = mesh.indexCount;
+			draw.instanceCount = count;
+			Game.cmd(draw);
+		}
+
+		int currentInstance = 0;
+		foreach(MeshInstance* instance; instances[])
+		{
+			if(instance.visible)
 			{
-				//img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
-				vec3 s = v0.xyz;
-				vec3 e = v1.xyz;
-				s.xy = s.xy*size + size;
-				e.xy = e.xy*size + size;
-				foreach(vec3 point, float percent; lineRaster3D(s, e))
+				tempData[currentInstance].transform = instance.transform;
+
+				currentInstance++;
+				if(currentInstance == batchSize)
 				{
-					img[point] = col;
+					flushBatch(batchSize);
+					currentInstance = 0;
 				}
 			}
 		}
-
-		plotLine(p0,p1,(m.meshData.colors !is null) ? m.meshData.colors[tri[0]].to!Color : Color(255,255,255,255));
-		plotLine(p1,p2,(m.meshData.colors !is null)? m.meshData.colors[tri[1]].to!Color : Color(255,255,255,255));
-		plotLine(p2,p0,(m.meshData.colors !is null) ? m.meshData.colors[tri[2]].to!Color : Color(255,255,255,255));
+		if(currentInstance > 0) flushBatch(currentInstance);
 	}
 }
 
-public void drawPoints(Image img, model m, camera c)
+
+public struct MeshInstance
 {
-	auto mvp = c.projMatrix*c.viewMatrix*m.modelMatrix;
-	for(int i = 0; i < m.meshData.vectors.length; i++)
+	// Information needed for rendering the instance
+	public bool visible = true;
+	public mat4 transform; // Location, rotation, scale
+	public CList!(MeshInstance*).Node node;
+	// Maybe add color
+	// Going to need to add bone transform information as well
+}
+
+private struct instanceVector
+{
+	@attachmentLocation(0) mat4 transform; 
+}
+
+private void initBatcher()
+{
+	if(batcherInted) return;
+
+	assert(Game.state.initialized); 
+
+	// Create instance buffer
 	{
-		auto v = m.meshData.vectors[i];
-		vec4 p0;
-
-		p0.xyz = v;
-		p0.w = 1;
-		p0 = mvp*p0;
-		p0 = p0 / p0.w;
-
-		img[p0.xyz] = (m.meshData.colors !is null) ? m.meshData.colors[i].to!Color : Color(255,255,255,255);
+		auto info 		= bufferCreateInfo();
+		info.size 		= (instanceVector.sizeof)*batchSize;
+		info.dynamic 	= true;
+		info.data 		= null;
+		instanceBuffer 	= Game.createBuffer(info);
 	}
-}
-*/
-void drawFrustrum(Image img, mat4 m, camera c)
-{
-	import graphics.render;
-	vec3[8] vecs;
-	vecs[0] = vec3(-1,-1,-1);
-	vecs[1] = vec3( 1,-1,-1);
-	vecs[2] = vec3( 1, 1,-1);
-	vecs[3] = vec3(-1, 1,-1);
-	vecs[4] = vec3(-1,-1, 1);
-	vecs[5] = vec3( 1,-1, 1);
-	vecs[6] = vec3( 1, 1, 1);
-	vecs[7] = vec3(-1, 1, 1);
-	
-	uvec2[12] index;
-	index[0] = uvec2(0,1);
-	index[1] = uvec2(1,2);
-	index[2] = uvec2(2,3);
-	index[3] = uvec2(3,0);
-	index[4] = uvec2(4,5);
-	index[5] = uvec2(5,6);
-	index[6] = uvec2(6,7);
-	index[7] = uvec2(7,4);
-	index[8] = uvec2(0,4);
-	index[9] = uvec2(1,5);
-	index[10] = uvec2(2,6);
-	index[11] = uvec2(3,7);
 
-	auto mvp = c.projMatrix*c.viewMatrix*(m.invert);
-	
-	foreach(uvec2 line; index)
+	// Create VAO
 	{
-		vec4 p0;
-		vec4 p1;
-		p0.xyz = vecs[line[0]];
-		p1.xyz = vecs[line[1]];
+		vaoCreateInfo info;
+		// Mesh data
+		info.registerAttachments!(Mesh.Vector)(0,0);
 		
-		p0.w = 1;
-		p1.w = 1;
-		
-		p0 = mvp*p0;
-		p1 = mvp*p1;
-		
-		p0 = p0 / p0.w;
-		p1 = p1 / p1.w;
-		
-		auto size = vec2(img.Width, img.Height);
-		size = size/2.0f;
-		
-		void plotLine(vec4 v0, vec4 v1, Color col)
-		{
-			if((v0.z > -1 && v0.z < 1) && (v1.z > -1 && v1.z < 1))
-			{
-				//img.drawLine(v0.xy*size + size, v1.xy*size + size, col);
-				vec3 s = v0.xyz;
-				vec3 e = v1.xyz;
-				s.xy = s.xy*size + size;
-				e.xy = e.xy*size + size;
-				foreach(vec3 point, float percent; lineRaster3D(s, e))
-				{
-					img[point] = col;
-				}
-			}
-		}
-		
-		plotLine(p0,p1, Color(255,255,255,255));
+		// Instance data
+		info.registerAttachments!(instanceVector)(3,1);
+		info.bindPointDivisors[1] = 1;
+
+		vao = Game.createVao(info);
 	}
-}
+	
+	// Create Shader
+	{
+		string vert = import("mesh.vert.glsl");
+		string frag = import("mesh.frag.glsl");
+		
+		shaderCreateInfo info;
+		info.vertShader = vert;
+		info.fragShader = frag;
+		shade = Game.createShader(info);
+	}
 
-
-public void setModelMatrix(ref model m,vec3 translation, vec3 rotation, vec3 scale)
-{
-	m.modelMatrix = translationMatrix(translation)*rotationMatrix(rotation)*scalingMatrix(scale);
-}
-
-mesh loadMesh(string file)
-{
-	import std.exception;
-	import std.stdio;
-	import math.conversion;
-
-
-	char hasVerts;
-	char hasCols;
-	char hasNorms;
-	char hasTexts;
-
-	int vertsN;
-	int trisN;
-	vec3[] verts;
-	vec3[] cols;
-	vec3[] norms;
-	vec2[] texCords;
-	uvec3[] tris;
-
-	auto f = File(file);
-
-	// Grab vertex count
-	f.rawRead(vertsN.toSlice); 
-
-	// Read Header
-	f.rawRead(hasVerts.toSlice);
-	f.rawRead(hasCols.toSlice);
-	f.rawRead(hasNorms.toSlice);
-	f.rawRead(hasTexts.toSlice);
-
-	enforce(hasVerts == 'y', "INTERNAL ERROR: there should always be vertex xyz data");
-
-	// Reserve space
-	verts = new vec3[vertsN];
-	cols = new vec3[vertsN];
-	norms = new vec3[vertsN];
-	texCords = new vec2[vertsN];
-
-	// Read Data
-	f.rawRead(verts);
-	if(hasCols  == 'y') f.rawRead(cols); 		else cols[] 	= vec3(255,255,255);
-	if(hasNorms == 'y') f.rawRead(norms); 		else norms[] 	= vec3(0,0,0);
-	if(hasTexts == 'y') f.rawRead(texCords); 	else texCords[] = vec2(0,0);
-
-	// Read indicies 
-	f.rawRead(trisN.toSlice);
-	tris = new uvec3[trisN];
-	f.rawRead(tris);
-
-	return new mesh(verts, cols, norms, texCords, tris);
-}
-
-
-
-
-
-/*
- * Attach a mesh to a shader input
- * Assumes the shader as the standard mesh interface as follows
- * 		vec3 pos
- * 		vec3 col
- * 		vec3 norm
- * 		vec2 uv
- */
-public void attachMesh(ref ShaderInput input, mesh m)
-{
-	if(!m.buffersGenerated) m.generateBuffers();
-	input.attachBuffer(m.vectorsBuffer);
-	input.attachBuffer(m.colorsBuffer);
-	input.attachBuffer(m.normalsBuffer);
-	input.attachBuffer(m.texCordsBuffer);
-	input.attachIndexBuffer(m.indicesBuffer);
+	batcherInted = true;
 }

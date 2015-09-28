@@ -102,6 +102,11 @@ struct Color
 		if(dA > 255) dA = 255;
 		return Color(cast(ubyte)(dR),cast(ubyte)(dG),cast(ubyte)(dB),cast(ubyte)(dA));
 	} 
+
+	void opAssign(uint c)
+	{
+		m_RGBA = c;
+	}
 }
 
 public Color alphaBlend(Color fg, Color bg)
@@ -122,13 +127,14 @@ public Color alphaBlend(Color fg, Color bg)
 
 vec4 to(T: vec4)(Color c)
 {
-	return vec4(c.R, c.G, c.B, c.A);
+	return vec4(c.R, c.G, c.B, c.A)/255.0f;
 }
 
 Color to(T: Color)(vec4 c)
 {
 	foreach(ref float f; c.m_data)
 	{
+		f *= 255.0f;
 		if(f > 255) f = 255;
 		if(f < 0) f = 0;
 	}
@@ -156,4 +162,9 @@ Color perpInterp(Color A, Color B, Color C, vec3 uvw, vec3 depth)
 	auto tmp = (a*uvw.x)/depth.x + (b*uvw.y)/depth.y + (c*uvw.z)/depth.z;
 	auto denom = (uvw.x/depth.x) + (uvw.y/depth.y) + (uvw.z/depth.z);
 	return (tmp / denom).to!Color;
+}
+
+Color RGB(ubyte r, ubyte g, ubyte b)
+{
+	return Color(r,g,b,255);
 }

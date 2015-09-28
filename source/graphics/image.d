@@ -2,6 +2,7 @@
 import graphics.color;
 import math.matrix;
 import std.stdio;
+import graphics.hw.game;
 
 import derelict.freeimage.freeimage;
 
@@ -69,24 +70,6 @@ class Image
 		opIndexAssign(c, cast(int)index.x, cast(int)index.y);
 	}
 
-	Color opIndex(vec3 p)
-	{
-		if(p.x<0 || p.y<0 || p.x>=m_width || p.y>=m_height) 
-		{
-			return  Color(0); // Silently fail... 
-		}
-		return getPixel3D(p);
-	}
-	
-	void opIndexAssign(Color c, vec3 p)
-	{
-		if(p.x<0 || p.y<0 || p.x>=m_width || p.y>=m_height) 
-		{
-			return; // Silently fail... 
-		}
-		setPixel3D(p,c);
-	}
-
 	public Color getPixel(int x, int y)
 	{
 		return m_data[x + y*m_width];
@@ -97,35 +80,11 @@ class Image
 		m_data[x + y*m_width] = c;
 	}
 
-	public Color getPixel3D(vec3 p)
-	{
-		return getPixel(cast(int) p.x, cast(int) p.y);
-	}
-
-	public void setPixel3D(vec3 p, Color c)
-	{
-		setPixel(cast(int) p.x, cast(int) p.y, c);
-	}
-
 	public Image dup()
 	{
 		return new Image(this);
 	}
 }
-
-class AlphaBlendedImage : Image
-{
-	public this(int w, int h)
-	{
-		super(w,h);
-	}
-
-	public override void setPixel( int x, int y, Color c) 
-	{
-		m_data[x + y*m_width] = alphaBlend(c, m_data[x + y*m_width]);
-	}
-}
-
 
 /** 
  * Save Image to file
@@ -288,35 +247,6 @@ void clear(Image img, Color c)
 	}
 }
 
-Image convolve(int n)(Image img, matrix!(n,n, float) kernal)
-{
-	static assert(n % 2 == 1, "Kernal Matrix must be square and have an odd size");
-	
-	Image cpy = Image(img.Width, img.Height);
-
-	for(int i = n/2; i < img.Width - n/2; i++)
-	{
-		for(int j = n/2; j < img.Height - n/2; j++)
-		{
-			
-			vec4 sum = vec4(0,0,0,0);
-			
-			for(int k = 0; k < n; k++)
-			{
-				for(int l = 0; l < n; l++)
-				{
-					Color c = img[i + k - n/2, j + l - n/2];
-					sum = sum + c.to!vec4 * kernal[k,l];
-				}
-			}
-			cpy[i,j] = sum.to!Color;
-			cpy[i,j].A = 255;
-		}
-	}
-	return cpy;
-}
-
-
 bool loadImageDialog(ref Image img)
 {
 	version(Windows)
@@ -395,105 +325,24 @@ bool saveImageDialog(Image img)
 	}
 }
 
-void drawImage(Image dest, Image src, vec2 loc)
+/**
+ * Create a texture an fill it with the image data
+ * After creation, the texture and the image are in 
+ * no way associated.
+ */
+public texture2DRef generateTexture(Image i)
 {
-	for(int i = 0; i < src.Width; i++)
-	{
-		for(int j = 0; j < src.Height; j++)
-		{
-			dest[cast(int)loc.x + i, cast(int)loc.y + j] = src[i,j];
-		}
-	}
-}
+	import math.geo.rectangle;
+	textureCreateInfo2D info;
+	info.size = uvec3(i.Width, i.Height, 1);
+	auto tex = Game.createTexture(info);
 
-Color textureLookupNearest(Image img, vec2 uv)
-{
-	import std.math;
-	
-	if(img is null) return Color(255,255,255);
-	
-	float u = uv.x;
-	float v = uv.y;
-	
-	int x = cast(int)(u*img.Width);
-	int y = cast(int)(v*img.Height);
-	
-	x %= img.Width;
-	y %= img.Height;
-	
-	if(x < 0) x = img.Width + x;
-	if(y < 0) y = img.Height + y;
-	
-	//writeln(img.Width, " * ", img.Height);
-	//writeln(x,' ',y);
-	
-	return img[x,y];	
-}
-
-Color textureLookupNearestMirror(Image img, vec2 uv)
-{
-	import std.math;
-	return img.textureLookupNearest(uv.uvMirror);
-}
-
-Color textureLookupBilinear(Image img, vec2 uv)
-{
-	import std.math;
-	
-	if(img is null) return Color(255,255,255);
-
-	ivec2 inBounds(int xl, int yl)
-	{
-		xl %= img.Width;
-		yl %= img.Height;
-		
-		if(xl < 0) xl = img.Width + xl;
-		if(yl < 0) yl = img.Height + yl;
-		return ivec2(xl,yl);
-	}
-
-	float u = uv.x;
-	float v = uv.y;
-	
-	float x = (u*img.Width);
-	float y = (v*img.Height);
-	
-	x %= img.Width;
-	y %= img.Height;
-	
-	if(x < 0) x = img.Width + x;
-	if(y < 0) y = img.Height + y;
-
-	int ix = cast(int)x;
-	int iy = cast(int)y;
-
-	float dx = x - ix;
-	float dy = y - iy;
-
-	Color c1 = img[ix,iy];
-	Color c2 = img[inBounds(ix + 1, iy)];
-	Color c3 = img[inBounds(ix, iy + 1)];
-	Color c4 = img[inBounds(ix + 1, iy + 1)];
-
-	return c1*(1-dx)*(1-dy) + c2*(dx)*(1-dy) + c3*(1-dx)*(dy) + c4*(dx)*(dy);
-}
-
-Color textureLookupBilinearMirror(Image img, vec2 uv)
-{
-	import std.math;
-	return img.textureLookupBilinear(uv.uvMirror);
-}
-
-vec2 uvMirror(vec2 uv)
-{
-	float x = uv.x;
-	float y = uv.y;
-	x %= 2;
-	y %= 2;
-	
-	if(x < 0) x = 2 + x;
-	if(y < 0) y = 2 + y;
-	if(x > 1) x = 2 - x;
-	if(y > 1) y = 2 - y;
-	return vec2(x, y);
+	textureSubDataInfo subinfo;
+	subinfo.format = colorFormat.RGBA_u8;
+	subinfo.size = uvec3(i.Width, i.Height, 0);
+	subinfo.offset = uvec3(0,0,0);
+	subinfo.level = 0;
+	subinfo.data = i.Data;
+	tex.subData(subinfo);
+	return tex;
 }
