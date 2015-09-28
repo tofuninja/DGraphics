@@ -1,4 +1,5 @@
 *.exe
+*.sublime-project
 dub.userprefs
 dub.selections.json
 .dub/*
