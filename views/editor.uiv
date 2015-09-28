@@ -1,0 +1,24 @@
+Base editor_base
+{
+	background = RGB(0,0,0);
+	
+	VerticalSplit splitView
+	{
+		flipSplit = true;
+		percentageSplit = true;
+		split = 0.25;
+		bounds = fill;
+		foreground = RGB(100,100,100);
+		
+		GameView view
+		{
+			background = RGB(0,0,0);
+			bounds = topView;
+		}
+		
+		Console console
+		{
+			bounds = botView;
+		}
+	}
+}
