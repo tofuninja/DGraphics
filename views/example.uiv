@@ -1,0 +1,9 @@
+Base uibase
+{
+	background = RGB(0,0,0);
+	
+	Console C
+	{
+		bounds = Rectangle(0,parent.bounds.size.y - 150, parent.bounds.size.x, 150);
+	}
+}
