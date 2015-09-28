@@ -10,3 +10,4 @@ dub.userprefs
 *.lib
 .dub/dub.json
 dub.selections.json
+.dub/*
