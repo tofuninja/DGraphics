@@ -20,26 +20,30 @@ enum consoleBufferSize = 1024*20;
 mixin loadUIString!(`
 Panel console_div
 {
-	background = RGB(70,70,70);
+	background = RGB(90,90,90);
+	foreground = RGB(130, 130, 130);
+	textcolor = RGB(255,255,255);
+
 	Textbox textentry
 	{
-		background = RGB(90,90,90);
-		foreground = RGB(255,255,255);
-		hintColor  = RGB(130,130,130);
+		background = parent.background;
+		textcolor = parent.textcolor;
+		hintColor  = parent.foreground;
 		text = "console box";
-		bounds.loc = vec2(2, parent.bounds.size.y -2 - defaultHeight);
-		bounds.size.x = parent.bounds.size.x-4;
+		bounds.loc = vec2(0, parent.bounds.size.y - defaultHeight);
+		bounds.size.x = parent.bounds.size.x;
 	}
 	
 	Scrollbox logbox
 	{
-		background = RGB(90,90,90);
-		bounds.loc = vec2(2,2);
-		bounds.size = vec2(parent.bounds.size.x-4, textentry.bounds.loc.y - 4);
+		background = parent.background;
+		foreground = parent.foreground;
+		bounds.loc = vec2(0,0);
+		bounds.size = vec2(parent.bounds.size.x, textentry.bounds.loc.y);
 		
 		Label log
 		{
-			foreground = RGB(255,255,255);
+			textcolor = parent.parent.textcolor;
 			bounds.loc = vec2(4,4);
 		}
 	}
@@ -425,7 +429,7 @@ private void getCommandName(dstring cmd, out dstring name, out dstring args)
 
 	start = end;
 	while(start < cmd.length && (cmd[start] == ' ' || cmd[start] == '\t' || cmd[start] == '\n')) start ++;
-
+	
 	args = cmd[start .. $];
 }
 

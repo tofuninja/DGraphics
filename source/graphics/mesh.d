@@ -15,6 +15,11 @@ import graphics.hw.game;
 // That way what we get from loading an asset is just a list of meshes
 // The assimp scene system is not helpful for our needs
 
+struct meshID
+{
+	string name;
+	uint index;
+}
 
 class Mesh
 {
@@ -25,15 +30,16 @@ class Mesh
 		@attachmentLocation(2) vec2 uv;
 	}
 
-	public string name;
+	public meshID id;
+
 	public uint vectorCount;
 	public uint indexCount;
 	private bufferRef vec;
 	private bufferRef index;
 
-	public this(string name, Vector[] vectors, uvec3[] indices)
+	public this(meshID id, Vector[] vectors, uvec3[] indices)
 	{
-		this.name = name;
+		this.id = id;
 		vectorCount = vectors.length;
 		indexCount = indices.length*3;
 
@@ -63,14 +69,14 @@ class Mesh
 	}
 }
 
-Mesh[] loadMeshAsset(string file)
+Mesh[] loadMeshAsset(string file, string root = "./assets/meshes/")
 {
 	import std.string;
 	import std.path;
 	import std.conv;
 
 	// Load mesh from file with assimp
-	const aiScene* scene = aiImportFile( ("./assets/meshes/" ~ file).toStringz(), 
+	const aiScene* scene = aiImportFile( (root ~ file).toStringz(), 
 		aiProcess_GenNormals			|
 		aiProcess_OptimizeMeshes		| 
 		aiProcess_OptimizeGraph			|
@@ -88,22 +94,12 @@ Mesh[] loadMeshAsset(string file)
 	scope(exit) aiReleaseImport(scene);
 	// Now we are free to access the scene
 	Mesh[] ret = new Mesh[scene.mNumMeshes];
-	string name = file.stripExtension;
 
 	for(int i = 0; i < scene.mNumMeshes; i++)
 	{
 		const aiMesh* m = scene.mMeshes[i];
 
 		bool hasUV = (m.mNumUVComponents[0] == 2);
-
-		// Get name
-		string meshName;
-		if(scene.mNumMeshes == 1)
-			meshName = name;
-		else if(m.mName.length == 0) 
-			meshName = name ~ "/" ~ i.to!string;
-		else
-			meshName = name ~ "/" ~ ai2s(m.mName).idup; 
 
 		// Get the faces, because of aiProcess_Triangulate, can assume the faces are triangles(i hope)
 		auto index = new uvec3[m.mNumFaces];
@@ -122,7 +118,7 @@ Mesh[] loadMeshAsset(string file)
 			vec[j] = v;
 		}
 
-		ret[i] = new Mesh(name, vec, index);
+		ret[i] = new Mesh(meshID(file, i), vec, index);
 	}
 	
 	return ret;
@@ -200,17 +196,6 @@ public struct MeshBatch
 	public this(Mesh m)
 	{
 		mesh = m;
-	}
-
-	public void insert(ref MeshInstance m)
-	{
-		m.node = &m;
-		instances.insert(m.node);
-	}
-
-	public void removeNode(ref MeshInstance m)
-	{
-		instances.removeNode(m.node);
 	}
 
 	public void runBatch(SceneUniforms uniforms, iRectangle viewport, fboRef fbo) 
@@ -292,7 +277,6 @@ public struct MeshInstance
 	// Information needed for rendering the instance
 	public bool visible = true;
 	public mat4 transform; // Location, rotation, scale
-	public CList!(MeshInstance*).Node node;
 	// Maybe add color
 	// Going to need to add bone transform information as well
 }

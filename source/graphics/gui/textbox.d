@@ -8,21 +8,31 @@ import math.geo.rectangle;
 import math.matrix;
 import util.event;
 import std.datetime;
+import graphics.font;
+
+// TODO multi line
+// TODO click to move bar
+// TODO highlight
+// TODO copy, paste, cut
+// TODO shift+arows to hightlight
+// TODO delete key
 
 class Textbox : div
 {
 	private bool showLine = false;
-	private int insertLoc = 0;
+	public int insertLoc = 0;
 	private SysTime lastBlink;
 	private bool ignoreFalse = false;
-
 
 	public dstring value = "";
 	public bool border = true;
 	public float defaultHeight = 0;
 	public Color hintColor;
 
-	enum styleMember[] style = super.style ~ [styleMember("hintColor", "t.hintColor = t.defaultHintColor(this.getStylizedProperty!\"foreground\")")];
+	mixin(customStyleMixin(`
+			hintColor = defaultHintColor(textcolor);
+			bounds.size.y = defaultHeight;
+		`));
 
 	public Color defaultHintColor(Color f)
 	{
@@ -30,25 +40,19 @@ class Textbox : div
 		v = v + vec4(0.4f,0.4f,0.4f,0);
 		return v.to!Color;
 	}
-
-	// TODO multi line
-	// TODO click to move bar
-	// TODO highlight
-	// TODO copy, paste, cut
-	// TODO shift+arows to hightlight
-	// TODO delete key
 	
 	this()
 	{
 		canClick = true;
 		canFocus = true;
+		cursor = Game.SimpleCursors.i_bar;
 	}
 
 	override protected void initProc() {
 		super.initProc;
 		lastBlink = Clock.currTime;
 		auto font = getGraphics().getFont();
-		bounds.size.y = defaultHeight = (font.ascent - font.descent + 4);
+		defaultHeight = (font.ascent - font.descent + 4);
 	}
 
 	override protected void drawProc(simplegraphics g, Rectangle renderBounds) {
@@ -86,14 +90,27 @@ class Textbox : div
 		//auto tb =  font.measureString(text);
 		vec2 p = renderBounds.loc + vec2(2, font.ascent + 2);//renderBounds.alignIn(tb, "left-center");
 		if(value == "") g.drawString(text, p, hintColor); 
-		else g.drawString(value, p, foreground);
+		else g.drawString(value, p, textcolor);
 
 		if(showLine)
 		{
-			auto lp = p + font.locateChar(value, insertLoc);
+			vec2 locateChar(int index)
+			{
+				int i = 0;
+				vec2 r = vec2(0,0);
+				foreach(LayoutPos g; font.textLayout(value, vec2(0,0)))
+				{
+					if(i == index) return g.loc;
+					i++;
+					r = g.loc + g.glyph.advance;
+				}
+				return r;
+			}
+
+			auto lp = p + locateChar(insertLoc);
 			auto start = lp + vec2(0, -font.ascent);
 			auto end = lp + vec2(0, -font.descent);
-			g.drawLine(start, end, foreground);
+			g.drawLine(start, end, textcolor);
 		}
 	}
 
@@ -111,6 +128,33 @@ class Textbox : div
 		}
 		else showLine = false;
 		if(showLine != prev) invalidate();
+	}
+
+	override protected void clickProc(vec2 loc, mouseButton btn, bool down)
+	{
+		auto font = getGraphics().getFont();
+		if(!down || btn != mouseButton.MOUSE_LEFT) return;
+		float dist = 9999;
+		uint index = 0;
+		uint i = 0;
+		vec2 r = vec2(0,0);
+		foreach(LayoutPos g; font.textLayout(value, vec2(2, font.ascent + 2)))
+		{
+			auto d = (loc - g.loc).length;
+			if(d < dist) {
+				dist = d;
+				index = i;
+			}
+			i++;
+			r = g.loc + g.glyph.advance;
+		}
+		auto d = (loc - r).length;
+		if(d < dist) index = i;
+
+		insertLoc = index;
+		showLine = true;
+		lastBlink = Clock.currTime;
+		invalidate;
 	}
 
 	override protected void keyProc(key k,keyModifier mods,bool down) {
@@ -149,6 +193,13 @@ class Textbox : div
 			lastBlink = Clock.currTime;
 			invalidate();
 		}
+		if(k == key.DELETE && insertLoc < value.length)
+		{
+			value = value[0 .. insertLoc] ~ value[insertLoc+1 .. $];
+			showLine = true;
+			lastBlink = Clock.currTime;
+			invalidate();
+		}
 		if(k == key.TAB)
 		{
 			charProc('\t');
@@ -167,75 +218,3 @@ class Textbox : div
 	}
 }
 
-
-dchar convertKeyToChar(key k, bool shift)
-{
-	if(k >= key.A && k <= key.Z)
-	{
-		dchar dif = cast(dchar)(k-key.A);
-		if(shift) return 'A' + dif;
-		else return 'a' + dif;
-	}
-
-	if(k >= key.NUM_0 && k <= key.NUM_9)
-	{
-		dchar dif = cast(dchar)(k-key.NUM_0);
-		if(!shift) return '0' + dif;
-
-		switch(dif)
-		{
-			case 0: return ')';
-			case 1: return '!';
-			case 2: return '@';
-			case 3: return '#';
-			case 4: return '$';
-			case 5: return '%';
-			case 6: return '^';
-			case 7: return '&';
-			case 8: return '*';
-			case 9: return '(';
-			default: return 0;
-		}
-	}
-
-	if(shift)
-	{
-		switch(k)
-		{
-			case key.SPACE: return ' ';
-			case key.APOSTROPHE: return '\'';
-			case key.COMMA: return ',';
-			case key.MINUS: return '-';
-			case key.PERIOD: return '.';
-			case key.SLASH: return '/';
-			case key.SEMICOLON: return ';';
-			case key.EQUAL: return '=';
-			case key.LEFT_BRACKET: return '[';
-			case key.BACKSLASH: return '\\';
-			case key.RIGHT_BRACKET: return ']';
-			case key.GRAVE_ACCENT: return '`';
-			case key.TAB: return '\t';
-			default: return 0;
-		}
-	}
-	else
-	{
-		switch(k)
-		{
-			case key.SPACE: return ' ';
-			case key.APOSTROPHE: return '\"';
-			case key.COMMA: return '<';
-			case key.MINUS: return '_';
-			case key.PERIOD: return '>';
-			case key.SLASH: return '?';
-			case key.SEMICOLON: return ':';
-			case key.EQUAL: return '+';
-			case key.LEFT_BRACKET: return '{';
-			case key.BACKSLASH: return '|';
-			case key.RIGHT_BRACKET: return '}';
-			case key.GRAVE_ACCENT: return '~';
-			case key.TAB: return '\t';
-			default: return 0;
-		}
-	}
-}

@@ -1,4 +1,4 @@
-module graphics.gui.verticalSplit;
+module graphics.gui.horizontalSplit;
 import graphics.hw.game;
 import graphics.gui.div;
 import graphics.simplegraphics;
@@ -7,7 +7,7 @@ import math.geo.rectangle;
 import math.matrix;
 import util.event;
 
-class VerticalSplit : div
+class HorizontalSplit : div
 {
 	public bool percentageSplit = false;
 	public bool flipSplit = false;
@@ -22,35 +22,32 @@ class VerticalSplit : div
 	public this()
 	{
 		canClick = true;
-		cursor = Game.SimpleCursors.v_size;
+		cursor = Game.SimpleCursors.h_size;
 	}
 
-	public Rectangle topView(this T)()
+	public Rectangle leftView(this T)()
 	{
 		import std.algorithm;
-		import std.stdio;
 		auto t = stylized(cast(T)this);
-		auto y = t.bounds.size.y;
+		auto y = t.bounds.size.x;
 		auto s = useInit? t.split : value;
 		if(t.percentageSplit) s *= y;
 		if(t.flipSplit) s = y - s;
 		s = min(max(0,s), y);
-
-		return Rectangle(0, 0, t.bounds.size.x, s);
+		return Rectangle(0, 0, s, t.bounds.size.y);
 	}
 
-	public Rectangle botView(this T)()
+	public Rectangle rightView(this T)()
 	{
 		import std.algorithm;
 		auto t = stylized(cast(T)this);
-		auto y = t.bounds.size.y;
+		auto y = t.bounds.size.x;
 		auto s = useInit? t.split : value;
 		if(t.percentageSplit) s *= y;
 		if(t.flipSplit) s = y - s;
 		s += barSize;
 		s = min(max(0,s), y);
-
-		return Rectangle(0, s, t.bounds.size.x, y-s);
+		return Rectangle(s, 0, y - s, t.bounds.size.y);
 	}
 
 	public override void doStylize()
@@ -62,9 +59,9 @@ class VerticalSplit : div
 		uint i = 0;
 		foreach(c; this.children.retro)
 		{
-			if(i == 0) c.bounds = topView();
+			if(i == 0) c.bounds = leftView();
 			else if(i == 1) {
-				c.bounds = botView();
+				c.bounds = rightView();
 				break;
 			}
 			i++;
@@ -75,7 +72,6 @@ class VerticalSplit : div
 			d.doStylize();
 		}
 	}
-
 
 	override protected void thinkProc()
 	{
@@ -88,11 +84,11 @@ class VerticalSplit : div
 				return;
 			}
 
-			value = clickValue + (Game.state.mousePos.y - gameY)/bounds.size.y;
-			value = min(value, 1 - barSize/bounds.size.y);
+			value = clickValue + (Game.state.mousePos.x - gameY)/bounds.size.x;
+			value = min(value, 1 - barSize/bounds.size.x);
 			value = max(value, 0);
 			if(flipSplit) value = 1 - value;
-			if(!percentageSplit) value *= bounds.size.y;
+			if(!percentageSplit) value *= bounds.size.x;
 			invalidate();
 		}
 	}
@@ -100,17 +96,17 @@ class VerticalSplit : div
 	override protected void clickProc(vec2 loc, mouseButton button, bool down)
 	{
 		import std.algorithm;
-		auto y = bounds.size.y;
+		auto y = bounds.size.x;
 		auto s = value;
 		if(percentageSplit) s *= y;
 		if(flipSplit) s = y - s;
 		s = min(max(0,s), y);
-		if(loc.y < s || loc.y > s + barSize) return;
+		if(loc.x < s || loc.x > s + barSize) return;
 
 		hasClicked = true;
-		gameY = Game.state.mousePos.y;
+		gameY = Game.state.mousePos.x;
 		clickValue = value;
-		if(!percentageSplit) clickValue /= bounds.size.y;
+		if(!percentageSplit) clickValue /= bounds.size.x;
 		if(flipSplit) clickValue = 1 - clickValue;
 
 		thinkProc();
@@ -126,14 +122,14 @@ class VerticalSplit : div
 
 		g.drawRectangle(renderBounds, background);
 		import std.algorithm;
-		auto y = bounds.size.y;
+		auto y = bounds.size.x;
 		auto s = value;
 		if(percentageSplit) s *= y;
 		if(flipSplit) s = y - s;
 		s = min(max(0,s), y);
 
-		renderBounds.loc.y += s;
-		renderBounds.size.y = barSize;
+		renderBounds.loc.x += s;
+		renderBounds.size.x = barSize;
 		auto rbm1 = renderBounds.size - vec2(1, 1);
 		auto v1 = renderBounds.loc;
 		auto v2 = renderBounds.loc + vec2(rbm1.x, 0);

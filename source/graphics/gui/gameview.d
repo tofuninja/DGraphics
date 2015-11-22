@@ -25,7 +25,7 @@ class GameView : SideRender
 		super(500,500);
 		mesh = loadMeshAsset("WusonBlitz.b3d")[0];
 		batch = MeshBatch(mesh);
-		batch.insert(instance);
+		batch.instances.insert(&instance);
 
 		instance.transform = modelMatrix(vec3(0,0,0), vec3(0,0,0), vec3(1,1,1));
 		instance.visible = true;

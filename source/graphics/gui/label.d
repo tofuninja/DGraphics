@@ -8,13 +8,14 @@ import math.matrix;
 
 class Label : div
 {
-	private bool btnDown = false;
-	
 	public bool border = false;
 	public bool back = false;
 	public string alignment = "top-left";
 
-	enum styleMember[] style = super.style ~ [styleMember("bounds", "t.bounds.size = t.defaultSize(this.getStylizedProperty!\"text\")")];
+	//enum styleMember[] style = super.style ~ [styleMember("bounds", "t.bounds.size = defaultSize(text)")];
+	mixin(customStyleMixin(`
+			bounds.size = defaultSize(text);
+		`));
 	
 	public vec2 defaultSize(dstring f)
 	{
@@ -56,10 +57,10 @@ class Label : div
 			g.drawLine(v3, v4, darker,1);
 			g.drawLine(v2, v4 + vec2(0, 1), darker,1);
 		}
-
+		
 		auto tb =  g.getFont.measureString(text);
 		vec2 p = renderBounds.alignIn(tb, alignment);
-		g.drawString(text, p, foreground); 
+		g.drawString(text, p, textcolor); 
 	}
 }
 

@@ -18,6 +18,7 @@ public struct textureRef(textureType T = textureType.tex2D)
 	package enum textureType 				type 		= T;
 	package GLuint 							id			= 0;
 	public uvec3 							size		= uvec3(0,0,0);
+	public bool 							isRenderBuffer = false;
 	
 	public void subData(textureSubDataInfo info) @nogc
 	{
@@ -45,7 +46,7 @@ public auto createTexture(textureType T)(textureCreateInfo!(T) info) @nogc
 	oglgTexTypeToGLenum(info.type, target, dim);
 	oglgColorFormatToGLenum(info.format, format);
 	glCreateTextures(target, 1, &(r.id));
-	
+
 	switch(dim)
 	{
 		case 1: 
@@ -59,6 +60,10 @@ public auto createTexture(textureType T)(textureCreateInfo!(T) info) @nogc
 			break;
 		default: assert(false, "Wut? How did I get here?");
 	}
+
+	glTextureParameteri(r.id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTextureParameteri(r.id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	debug r.info = info;
 	return r;
 }
@@ -72,7 +77,7 @@ public auto createTexture(textureType T)(textureViewCreateInfo!(T) info) @nogc
 	// TODO check if this works
 	// TODO check if cube map array works, not sure if index needs to be mul by 6 as well... 
 	
-	debug assert(glIsTexture(info.soruce.id) == GL_TRUE, "Can not make view from render buffer");
+	debug assert(!info.source.isRenderBuffer, "Can not make view from render buffer");
 	
 	enum textureType viewType = oglgTextureTypeView(T);
 	auto r = textureRef!(viewType, F);
@@ -98,7 +103,7 @@ public auto createTexture(textureType T)(textureViewCreateInfo!(T) info) @nogc
 
 public void destroyTexture(textureType T)(ref textureRef!T obj) @nogc
 {
-	if(glIsTexture(obj.id) == GL_TRUE)
+	if(!obj.isRenderBuffer)
 		glDeleteTextures(1, &obj.id);
 	else 
 		glDeleteRenderbuffers(1, &obj.id);
@@ -233,7 +238,7 @@ package auto oglgCreateRenderBuffer(T)(T info) @nogc
 	
 	glCreateRenderbuffers(1, &r.id);
 	glNamedRenderbufferStorage(r.id, format, info.size.x, info.size.y);
-	
+	r.isRenderBuffer = true;
 	debug r.info = info;
 	return r;
 }

@@ -49,6 +49,7 @@ class Font
 		ascent = cast(int)fontCordsToPixelY(face, face.ascender);
 		descent = cast(int)fontCordsToPixelY(face, face.descender);
 
+		// Load all the glyphs and put them into the glyphs array
 		foreach(g; allGlyphs(face))
 		{
 
@@ -108,14 +109,25 @@ class Font
 
 				g.offset.x = slot.bitmap_left;
 				g.offset.y = -slot.bitmap_top;
-				//assert(g.extent.size.x == slot.bitmap.width);
-				//assert(g.extent.size.y == slot.bitmap.rows);
-				//assert(g.advance.x == slot.advance.x >> 6);
-				//assert(g.advance.y == slot.advance.y >> 6);
+			}
+
+			// Create a texture and fill it with the data
+			{
+				textureCreateInfo2D info;
+				info.format = colorFormat.R_u8;
+				info.size = uvec3(s, s, 0);
+				texture = Game.createTexture(info);
+				
+				textureSubDataInfo sub;
+				sub.size = uvec3(s, s, 0);
+				sub.data = dest;
+				sub.format = colorFormat.R_u8;
+				texture.subData(sub);
 			}
 
 			/*
 			{
+				// Save the fontmap texture inot an image
 				import graphics.color;
 				import graphics.image;
 				Image img = new Image(s, s);
@@ -126,135 +138,139 @@ class Font
 						img[i,j] = Color(0, 0, 0, dest[i + j*s]);
 					}
 				}
-				img.saveImage("fonttexture.png");
-			}*/
-
-
-			// Create a texture and fill it with the data
-			{
-				textureCreateInfo2D info;
-				info.format = colorFormat.R_u8;
-				info.size = uvec3(s, s, 0);
-				texture = Game.createTexture(info);
-
-				textureSubDataInfo sub;
-				sub.size = uvec3(s, s, 0);
-				sub.data = dest;
-				sub.format = colorFormat.R_u8;
-				texture.subData(sub);
+				img.saveImage(file ~ "_fonttexture.png");
 			}
+			*/
+
+			/*
+			// Save all supported chars into a text
+			{
+				import std.file;
+				auto f = File(file ~ "_fonttext.txt", "w");
+				foreach(g; glyphs)
+				{
+					f.writeln(g);
+				}
+			}*/
 
 			freeT(dest);
 		}
 
 		FT_Done_Face(face);
-
-
 	}
 
 	public fRectangle measureString(dstring text)
 	{
-		auto font = this;
-		vec2 min, max;
-		min = vec2( 999999, 999999);
-		max = vec2(-999999,-999999);
-		vec2 textloc = vec2(0,0);
-		vec2 lineStart = textloc;
-		int lineCount = 0; 
-		float tabWidth = font.glyphs[' '].advance.x * 5; // Width of 5 spaces
-		
-		vec2 minVec2(vec2 a, vec2 b)
+		fRectangle r = fRectangle(0,0,0,0);
+		auto range = textLayout(text, vec2(0,0));
+		if(range.empty) return r;
+		r.loc = range.front.loc + range.front.glyph.offset;
+		r.size = cast(vec2)range.front.glyph.extent.size;
+		range.popFront();
+		foreach(g; range)
 		{
-			float x,y;
-			x = (a.x < b.x)? a.x : b.x;
-			y = (a.y < b.y)? a.y : b.y;
-			return vec2(x,y);
+			if(g.glyph == null) continue;
+			fRectangle n; 
+			n.loc = g.loc + g.glyph.offset;
+			n.size = cast(vec2)g.glyph.extent.size;
+			expandToFit(r, n);
 		}
 		
-		vec2 maxVec2(vec2 a, vec2 b)
-		{
-			float x,y;
-			x = (a.x > b.x)? a.x : b.x;
-			y = (a.y > b.y)? a.y : b.y;
-			return vec2(x,y);
-		}
-		
-		foreach(dc; text)
-		{
-			// Special chars
-			if(dc == '\r') continue;
-			if(dc == '\n') {
-				lineCount++;
-				textloc = lineStart + vec2(0, font.lineHeight*lineCount);
-				continue;
-			}
-			if(dc == '\t')
-			{
-				import std.math;
-				textloc.x = ceil((textloc.x + 1 - lineStart.x)/tabWidth)*tabWidth + lineStart.x;
-				continue;
-			}
-			
-			auto gp = dc in font.glyphs;
-			Glyph g;
-			if(gp) 	g = *gp;
-			else 	g = font.glyphs['█'];
-			
-			vec2 offset = cast(vec2)g.offset; 
-			vec2 loc = textloc + offset;
-			vec2 size = cast(vec2)g.extent.size - vec2(2,2);
-			
-			min = minVec2(min, loc);
-			min = minVec2(min, loc + size);
-			max = maxVec2(max, loc);
-			max = maxVec2(max, loc + size);
-			
-			textloc = textloc + cast(vec2)g.advance;
-		}
-		
-		return fRectangle(min, (max-min));
+		return r;
 	}
 
-	public vec2 locateChar(dstring text, int index)
+	/*
+	 * Returns an range of layoutPos that is the text layed out
+	 * The layout engin can basicly do what ever it wants with the text you give it
+	 * 
+	 * Things the layout engin will not guarantee
+	 *      - ordering of the chars in the layout range possibly will not match the ordering of the chars in the input
+	 *      - the layout range possibly will not contain all the chars in the input(most likly wont)
+	 *      - the layout range possibly will contain chars that were not in the input, what ever it dertermins to be the correct way to layout the text
+	 */
+	public auto textLayout(dstring text, vec2 pen)
 	{
-		auto font = this;
+		import std.range.primitives;
+		struct Result{
+			private dstring data;
+			private Font font;
+			private uint loc = 0;
+			private vec2 pen_loc; 
+			private vec2 line_start; 
+			private uint line_count = 0;
+			private float tab_width; 
 
-		vec2 textloc = vec2(0,0);
-		vec2 lineStart = textloc;
-		int lineCount = 0; 
-		float tabWidth = font.glyphs[' '].advance.x * 5; // Width of 5 spaces
+			public bool empty = false;;
+			public LayoutPos front;
+			public void popFront() 	
+			{ 
+				if(loc >= data.length) {
+					empty = true;
+					return;
+				}
 
-		int i = 0;
-		foreach(dc; text)
-		{
-			// Special chars
-			if(dc == '\r') continue;
-			if(dc == '\n') {
-				if(i == index) break;
-				lineCount++;
-				textloc = lineStart + vec2(0, font.lineHeight*lineCount);
-				continue;
-			}
-			if(dc == '\t')
-			{
-				import std.math;
-				if(i == index) break;
-				textloc.x = ceil((textloc.x + 1 - lineStart.x)/tabWidth)*tabWidth + lineStart.x;
-				continue;
-			}
-			
-			auto gp = dc in font.glyphs;
-			Glyph g;
-			if(gp) 	g = *gp;
-			else 	g = font.glyphs['█'];
+				dchar dc = data[loc];
+				loc ++;
 
-			if(i == index) break;
-			textloc = textloc + cast(vec2)g.advance;
-			i++;
+				// Special chars
+				if(dc == '\r') {
+					popFront(); // We skip '/r'
+					return;
+				}
+				if(dc == '\n') {
+					front.glyph = null;
+					front.c = dc;
+					front.loc = pen_loc;
+
+					line_count++;
+					pen_loc = line_start + vec2(0, font.lineHeight*line_count);
+					return;
+				}
+				if(dc == '\t')
+				{
+					import std.math;
+					front.glyph = null;
+					front.c = dc;
+					front.loc = pen_loc;
+
+					pen_loc.x = ceil((pen_loc.x + 1 - line_start.x)/tab_width)*tab_width + line_start.x;
+					return;
+				}
+				
+				auto g = dc in font.glyphs;
+				if(g == null) // We skip chars we dont have a glyph for... 
+				{
+					popFront();
+					return;
+				}
+
+				front.glyph = g;
+				front.c = dc;
+				front.loc = pen_loc;
+				pen_loc = pen_loc + cast(vec2)g.advance;
+			} 
 		}
-		
-		return textloc;
+		static assert(isInputRange!Result);
+
+
+		Result r;
+		r.data = text;
+		r.font = this;
+		r.pen_loc = pen;
+		r.line_start = pen;
+
+		// Get the size of a tab
+		auto g = ' ' in glyphs;
+		if(g != null)
+		{
+			r.tab_width = g.advance.x * 5; // Width of 5 spaces
+		}
+		else r.tab_width = 0; // No space? No tabs :/ 
+
+		r.popFront();
+		return r;
 	}
+
 }
 
 struct Glyph
@@ -266,6 +282,13 @@ struct Glyph
 	iRectangle extent;
 	dchar glyphChar;
 
+}
+
+struct LayoutPos
+{
+	Glyph* glyph = null;
+	dchar c; 
+	vec2 loc; 
 }
 
 private struct glyphID
@@ -298,7 +321,7 @@ private auto allGlyphs(FT_Face face)
 	return result(face);
 }
 
-uint nextPowerOf2(uint v)
+private uint nextPowerOf2(uint v)
 {
 	v--;
 	v |= v >> 1;

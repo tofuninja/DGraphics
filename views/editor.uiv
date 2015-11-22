@@ -1,24 +1,47 @@
 Base editor_base
 {
 	background = RGB(0,0,0);
-	
-	VerticalSplit splitView
+	VerticalSplit : grey
 	{
 		flipSplit = true;
 		percentageSplit = true;
 		split = 0.25;
 		bounds = fill;
-		foreground = RGB(100,100,100);
 		
-		GameView view
+		HorizontalSplit : grey
 		{
-			background = RGB(0,0,0);
-			bounds = topView;
+			split = 200;
+			
+			FileExplorer fileBox
+			{
+				background = RGB(230,230,230);
+				foreground = RGB(130, 130, 130);
+				textcolor = RGB(0,0,0);
+			}
+
+			HorizontalSplit : grey
+			{
+				flipSplit = true;
+				split = 200;
+				GameView 
+				{
+					background = RGB(0,0,0);
+				}
+
+				EntityProperties entityProps : grey
+				{
+
+				}
+			}
 		}
 		
-		Console console
-		{
-			bounds = botView;
-		}
+		Console console : grey {}
 	}
+}
+
+style grey
+{
+	background = RGB(90,90,90);
+	foreground = RGB(130, 130, 130);
+	textcolor = RGB(255,255,255);
 }

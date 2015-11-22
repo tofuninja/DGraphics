@@ -65,7 +65,7 @@ class Button : div
 		auto tb =  g.getFont.measureString(text);
 		vec2 p = renderBounds.alignIn(tb, alignment);
 		if(btnDown) p = p + vec2(1,1);
-		g.drawString(text, p, foreground); 
+		g.drawString(text, p, textcolor); 
 	}
 
 	override protected void clickProc(vec2 loc, mouseButton btn, bool down)

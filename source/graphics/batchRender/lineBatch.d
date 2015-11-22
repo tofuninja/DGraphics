@@ -178,19 +178,25 @@ struct lineBatch
 				flushBatch(i);
 				i = 0;
 			}
-			Rectangle scissor = b[5];
+			vec2 start 			= b[0];
+			vec2 end 			= b[1];
+			Color color 		= b[2];
+			float width 		= b[3];
+			float depth 		= b[4];
+			Rectangle scissor 	= b[5];
 			scissor.loc = (scissor.loc*2)/screen - vec2(1,1);
 			scissor.size = (scissor.size*2)/screen;
 
-			vec2 v1 = ((b[0]*2 + vec2(1,0))/(viewport.size)) - vec2(1,1);
-			vec2 v2 = ((b[1]*2 + vec2(1,0))/(viewport.size)) - vec2(1,1);
+			vec2 v1 = ((start*2 + vec2(1,0))/(viewport.size)) - vec2(1,1);
+			vec2 v2 = ((end  *2 + vec2(1,0))/(viewport.size)) - vec2(1,1);
 			tempData[i].line.xy = v1;
 			tempData[i].line.zw = v2;
-			tempData[i].color = b[2].to!vec4();
-			tempData[i].width = b[3]*2/viewport.size.y;
-			tempData[i].depth = b[4];
+			tempData[i].color = color.to!vec4();
+			tempData[i].width = width*2/viewport.size.y;
+			tempData[i].depth = depth;
 			tempData[i].scissor.xy = scissor.loc;
 			tempData[i].scissor.zw = scissor.size;
+
 			i++;
 		}
 		flushBatch(i);

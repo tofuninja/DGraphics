@@ -140,3 +140,56 @@ auto clip(T)(RectangleT!T clip, RectangleT!T child)
 	auto h = clamp(child.loc.y + child.size.y, clip.loc.y, clip.loc.y + clip.size.y) - y;
 	return RectangleT!T(x,y,w,h);
 }
+
+void expandToFit(T)(ref RectangleT!T expandMe, RectangleT!T fit)
+{
+	import std.algorithm;
+
+	auto x = min(expandMe.loc.x, fit.loc.x);
+	auto y = min(expandMe.loc.y, fit.loc.y);
+	auto w = max(expandMe.loc.x + expandMe.size.x, fit.loc.x + fit.size.x) - x;
+	auto h = max(expandMe.loc.y + expandMe.size.y, fit.loc.y + fit.size.y) - y;
+	expandMe = RectangleT!T(x,y,w,h); 
+}
+
+bool intersects(T)(RectangleT!T a, RectangleT!T b)
+{
+	import std.stdio;
+	foreach(p; a.points) if(b.contains(p)) return true;
+	foreach(p; b.points) if(a.contains(p)) return true;
+	return false;
+}
+
+auto points(T)(RectangleT!T rec)
+{
+	import std.range.primitives;
+	struct Result{
+		private RectangleT!T r;
+		private uint count;
+		public bool empty;
+		public matrix!(2,1,T) front;
+		public void popFront() 	
+		{ 
+			count++;
+			switch(count)
+			{
+				case 1:
+					front = r.loc;
+					front.x = front.x + r.size.x;
+					break;
+				case 2:
+					front = r.loc + r.size;
+					break;
+				case 3:
+					front = r.loc;
+					front.y = front.y + r.size.y;
+					break;
+				default:
+					empty = true;
+			}
+		} 
+	}
+
+	static assert(isInputRange!Result);
+	return Result(rec, 0, false, rec.loc);
+}

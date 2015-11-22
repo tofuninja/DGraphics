@@ -13,6 +13,8 @@ private bufferRef tri;
 private vaoRef vao;
 private shaderRef shade;
 
+// TODO rounding error in viewport calculation? 
+
 /**
  * Renders of to an off screen buffer and displays that as the contents of the div with out the need to re-render the rest of the ui
  * The contents are re-rendered every think

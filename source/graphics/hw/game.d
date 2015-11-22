@@ -25,6 +25,8 @@ alias shaderRef 		= Game.shaderRef;
 alias fboRef 			= Game.fboRef;
 alias bufferRef 		= Game.bufferRef;
 alias vaoRef 			= Game.vaoRef;
+alias cursorRef			= Game.cursorRef;
+
 
 // TODO add a seperate type for compute?
 // TODO add enforcement that Game really has everything? 

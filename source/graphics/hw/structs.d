@@ -4,6 +4,7 @@ import graphics.hw.game;
 import math.matrix;
 import math.geo.rectangle;
 import graphics.color;
+import core.time;
 
 //    _____        __         _____ _                   _       
 //   |_   _|      / _|       / ____| |                 | |      
@@ -37,6 +38,8 @@ public struct gameStateInfo
 	uint totalFrames;
 	fboRef mainFbo;
 	iRectangle mainViewport;
+	Duration doubleClick = dur!"msecs"(500);
+
 	// TODO window size
 	// TODO window location
 }

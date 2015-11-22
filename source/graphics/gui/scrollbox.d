@@ -10,20 +10,21 @@ import util.event;
 
 import std.stdio;
 
-private enum barWidth = 6;
-private enum barBoarder = 1;
-private enum scrollAmount = 8;
-
 class Scrollbox : div
 {
 	public bool border = true;
 	public vec2 area;
 	public vec2 scroll;
 
-	private scrollbar!(false) horz;
-	private scrollbar!(true) vert;
+	protected scrollbar!(false) horz;
+	protected scrollbar!(true) vert;
+	package enum barWidth = 6;
+	package enum barBoarder = 1;
+	package enum scrollAmount = 8;
 
-	enum styleMember[] style = super.style ~ [styleMember("foreground", "t.foreground = t.defaultForeColor(this.getStylizedProperty!\"background\")")];
+	mixin(customStyleMixin(`
+			foreground = defaultForeColor(background);
+		`));
 
 	public this()
 	{
@@ -89,23 +90,45 @@ class Scrollbox : div
 		stylizeProc();
 		onStylize(this);
 
-
 		float x = 0;
 		float y = 0;
 
 		foreach(div d; children())
 		{
+			if(typeid(d) == typeid(scrollbar!true) || typeid(d) == typeid(scrollbar!false))
+				continue;
+
 			d.doStylize();
-			if(!(typeid(d) == typeid(scrollbar!true) || typeid(d) == typeid(scrollbar!false)))
-			{
-				if(d.bounds.loc.x + d.bounds.size.x > x) x = d.bounds.loc.x + d.bounds.size.x;
-				if(d.bounds.loc.y + d.bounds.size.y > y) y = d.bounds.loc.y + d.bounds.size.y;
-			}
+			if(d.bounds.loc.x + d.bounds.size.x > x) x = d.bounds.loc.x + d.bounds.size.x;
+			if(d.bounds.loc.y + d.bounds.size.y > y) y = d.bounds.loc.y + d.bounds.size.y;
 		}
 
-		area = vec2(x + barWidth + barBoarder, y + barWidth + barBoarder);
-		//writeln(area);
-		afterStylizeProc();
+		if(y > bounds.size.y)
+		{
+			vert.isShown = true;
+			x += barWidth + barBoarder;
+		}
+		else vert.isShown = false;
+
+		if(x > bounds.size.x)
+		{
+			horz.isShown = true;
+			y += barWidth + barBoarder;
+		}
+		else horz.isShown = false;
+
+		vert.doStylize();
+		horz.doStylize();
+
+		area = vec2(x, y);
+
+		import std.algorithm;
+		float ssizey = bounds.size.y / area.y;
+		float ssizex = bounds.size.x / area.x;
+		scroll.y = min(scroll.y, 1 - ssizey);
+		scroll.y = max(scroll.y,0);
+		scroll.x = min(scroll.x, 1 - ssizex);
+		scroll.x = max(scroll.x,0);
 	}
 
 	override public void doDraw(simplegraphics g, Rectangle renderBounds)
@@ -171,18 +194,6 @@ class Scrollbox : div
 		
 		return last;
 	}
-
-	override protected void afterStylizeProc()
-	{
-		import std.algorithm;
-		float ssizey = bounds.size.y / area.y;
-		float ssizex = bounds.size.x / area.x;
-		scroll.y = min(scroll.y, 1 - ssizey);
-		scroll.y = max(scroll.y,0);
-		scroll.x = min(scroll.x, 1 - ssizex);
-		scroll.x = max(scroll.x,0);
-	}
-
 }
 
 private class scrollbar(bool vertical) : div  
@@ -193,6 +204,7 @@ private class scrollbar(bool vertical) : div
 	private Scrollbox parent;
 	private float gameY;
 	private float clickValue;
+	private bool isShown;
 
 	public this(Scrollbox p)
 	{
@@ -204,11 +216,11 @@ private class scrollbar(bool vertical) : div
 	override protected void scrollProc(vec2 loc, int s){
 		static if(vertical)
 		{
-			parent.scroll.y -= s*scrollAmount / parent.area.y;
+			parent.scroll.y -= s*Scrollbox.scrollAmount / parent.area.y;
 		}
 		else
 		{
-			parent.scroll.x -= s*scrollAmount / parent.area.x;
+			parent.scroll.x -= s*Scrollbox.scrollAmount / parent.area.x;
 		}
 
 		invalidate();
@@ -264,29 +276,35 @@ private class scrollbar(bool vertical) : div
 	
 	override protected void stylizeProc()
 	{
+		if(isShown == false)
+		{
+			bounds = Rectangle(0,0,0,0);
+			return;
+		}
+
 		auto pbs = parent.bounds.size;
 		static if(vertical)
 		{
 			bounds = Rectangle(
-				pbs.x - barWidth - barBoarder,
-				barBoarder,
-				barWidth, 
-				pbs.y - barWidth - 2*barBoarder
+				pbs.x - Scrollbox.barWidth - Scrollbox.barBoarder,
+				Scrollbox.barBoarder,
+				Scrollbox.barWidth, 
+				pbs.y - Scrollbox.barWidth - 2*Scrollbox.barBoarder
 				);
 		}
 		else
 		{
 			bounds = Rectangle(
-				barBoarder,
-				pbs.y - barWidth - barBoarder,
-				pbs.x - barWidth - 2*barBoarder, 
-				barWidth
+				Scrollbox.barBoarder,
+				pbs.y - Scrollbox.barWidth - Scrollbox.barBoarder,
+				pbs.x - Scrollbox.barWidth - 2*Scrollbox.barBoarder, 
+				Scrollbox.barWidth
 				);
 		}
 	}
 		
 	override protected void drawProc(simplegraphics g, Rectangle renderBounds) {
-	
+		if(isShown == false) return;
 		static if(vertical)
 		{
 			float ssize = parent.bounds.size.y / parent.area.y;
@@ -299,8 +317,6 @@ private class scrollbar(bool vertical) : div
 			renderBounds.loc.x += renderBounds.size.x*parent.scroll.x;
 			renderBounds.size.x = renderBounds.size.x*ssize;
 		}
-
-		if(ssize >= 1.0f) return;
 
 		g.drawRectangle(renderBounds, parent.foreground);
 	}

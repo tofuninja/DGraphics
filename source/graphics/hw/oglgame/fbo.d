@@ -19,7 +19,6 @@ public struct fboRef
 
 public fboRef createFbo(fboCreateInfo info) @nogc
 {
-	import std.stdio;
 	fboRef r;
 	GLenum[8] DrawBuffers;
 	
@@ -38,7 +37,7 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 
 		auto id = info.colors[i].tex.id;
 		
-		if(glIsTexture(id) == GL_TRUE)
+		if(!info.colors[i].tex.isRenderBuffer)
 		{
 			glNamedFramebufferTexture(r.id, GL_COLOR_ATTACHMENT0 + i, id, 0);
 		}
@@ -55,7 +54,7 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 	{
 		// If depthstencil enabled, ignore the depth and stencil settings
 		auto id = info.depthstencil.tex.id;
-		if(glIsTexture(id) == GL_TRUE)
+		if(!info.depthstencil.tex.isRenderBuffer)
 			glNamedFramebufferTexture(r.id, GL_DEPTH_STENCIL_ATTACHMENT, id, 0);
 		else 
 			glNamedFramebufferRenderbuffer(r.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, id);
@@ -66,7 +65,7 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 		if(info.depth.enabled)
 		{
 			auto id = info.depth.tex.id;
-			if(glIsTexture(id) == GL_TRUE)
+			if(!info.depth.tex.isRenderBuffer)
 				glNamedFramebufferTexture(r.id, GL_DEPTH_ATTACHMENT, id, 0);
 			else 
 				glNamedFramebufferRenderbuffer(r.id, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, id);
@@ -76,34 +75,30 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 		if(info.depth.enabled)
 		{
 			auto id = info.stencil.tex.id;
-			if(glIsTexture(id) == GL_TRUE)
+			if(!info.stencil.tex.isRenderBuffer)
 				glNamedFramebufferTexture(r.id, GL_STENCIL_ATTACHMENT, id, 0);
 			else 
 				glNamedFramebufferRenderbuffer(r.id, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, id);
 		}
 	}
 	
-	glNamedFramebufferDrawBuffers(r.id, DrawBuffers.length, DrawBuffers.ptr); // "1" is the size of DrawBuffers
-	assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE, "FBO failed to create.");
+	glNamedFramebufferDrawBuffers(r.id, DrawBuffers.length, DrawBuffers.ptr);
 
-	debug
+	auto error = glCheckNamedFramebufferStatus(r.id, GL_FRAMEBUFFER);
+	if(error != GL_FRAMEBUFFER_COMPLETE)
 	{
-		auto error = glCheckNamedFramebufferStatus(r.id, GL_FRAMEBUFFER);
-		if(error != GL_FRAMEBUFFER_COMPLETE)
+		switch(error)
 		{
-			switch(error)
-			{
-				case GL_FRAMEBUFFER_UNDEFINED : 						assert(false, "GL_FRAMEBUFFER_UNDEFINED");
-				case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
-				case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT : 	assert(false, "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
-				case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER");		
-				case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER");
-				case GL_FRAMEBUFFER_UNSUPPORTED : 						assert(false, "GL_FRAMEBUFFER_UNSUPPORTED");
-				case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE");
-				case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS :  		assert(false, "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS");
-				default : 												assert(false, "Unknown framebuffer error");
-			} 
-		}
+			case GL_FRAMEBUFFER_UNDEFINED : 						assert(false, "GL_FRAMEBUFFER_UNDEFINED");
+			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
+			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT : 	assert(false, "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
+			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER");		
+			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER");
+			case GL_FRAMEBUFFER_UNSUPPORTED : 						assert(false, "GL_FRAMEBUFFER_UNSUPPORTED");
+			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE");
+			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS :  		assert(false, "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS");
+			default : 												assert(false, "Unknown framebuffer error");
+		} 
 	}
 
 	return r;

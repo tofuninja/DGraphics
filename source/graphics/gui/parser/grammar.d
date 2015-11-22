@@ -18,9 +18,16 @@ bool uiFileParse(ref astNode node, string input)
 	return p.entryGramer(node);
 }
 
+bool customStyleParse(ref astNode node, string input)
+{
+	parser p = new parser(input);
+	return p.customStyleEntry(node);
+}
+
 private class parser
 {
 	tokenizer tok;
+	uint anon_div_name = 0;
 
 	public this(string code)
 	{
@@ -78,8 +85,26 @@ private class parser
 		}
 	}
 
+	bool customStyleEntry(ref astNode node)
+	{
+		with(tok)
+		{
+			auto back = getInput();
+			
+			string name = "";
+			string[] styles;
+
+			styleNode r = new styleNode(name, styles);
+			astNode n;
+			while(styleBodyStmt(n)) r.addChild(n); 
+			node = r;
+			return true;
+		}
+	}
+
 	bool divStmt(ref astNode node)
 	{
+		import std.conv;
 		with(tok)
 		{
 			auto back = getInput();
@@ -89,7 +114,7 @@ private class parser
 			string[] styles;
 			
 			if(!identifier(className)) 	{ setInput(back); return false; }
-			if(!identifier(name))		{ setInput(back); return false; }
+			if(!identifier(name))		{ name = "anon_div_" ~ anon_div_name.to!string(); anon_div_name++; }
 			if(name == "style")			{ setInput(back); return false; }
 			if(className == "style")	{ setInput(back); return false; }
 			if(operator(":"))
@@ -131,7 +156,7 @@ private class parser
 			auto back = getInput();
 			astNode target;
 			astNode exp;
-			if(!nameLookUpExpression(target)) 					{ setInput(back); return false; }
+			if(!nameLookUpExpression(target, true)) 			{ setInput(back); return false; }
 			if(!operator("=")) 									{ setInput(back); return false; }
 			if(!(expression(exp) || stringTermExpression(exp))) { setInput(back); return false; }
 			if(!operator(";")) 									{ setInput(back); return false; }
@@ -208,10 +233,10 @@ private class parser
 
 	bool termExpression(ref astNode node)
 	{
-		return boolExpression(node) || funcCallExpression(node) || nameLookUpExpression(node, true) || numberExpression(node) || parenExpression(node);
+		return boolExpression(node) || funcCallExpression(node) || nameLookUpExpression(node) || numberExpression(node) || parenExpression(node);
 	}
 
-	bool nameLookUpExpression(ref astNode node, bool stylize = false)
+	bool nameLookUpExpression(ref astNode node, bool insert_t = false)
 	{
 		with(tok)
 		{
@@ -226,7 +251,7 @@ private class parser
 				if(!identifier(n)) { setInput(back); return false; }
 				names ~= (n);
 			}
-			node = new nameLookUpNode(names, stylize);
+			node = new nameLookUpNode(names, insert_t);
 			return true;
 		}
 	}
@@ -280,6 +305,7 @@ private class parser
 
 	bool funcCallExpression(ref astNode node)
 	{
+
 		with(tok)
 		{
 			auto back = getInput();
@@ -289,8 +315,7 @@ private class parser
 
 			if(!identifier(n))		{ setInput(back); return false; }
 			if(!operator("(")) 		{ setInput(back); return false; }
-			if(!expression(exp)) 	{ setInput(back); return false; }
-			args ~= [exp];
+			if(expression(exp)) 	args ~= [exp];
 			while(operator(","))
 			{
 				if(!expression(exp)){ setInput(back); return false; }

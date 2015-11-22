@@ -1,5 +1,5 @@
 ﻿module container.subStruct;
-import util.hasUDA;
+import std.traits;
 
 /**
  * Used to get the a sub-set of a structs members

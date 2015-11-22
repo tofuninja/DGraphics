@@ -301,13 +301,15 @@ enum mouseButton
 	MOUSE_6 = 5,
 	MOUSE_7 = 6,
 	MOUSE_8 = 7,
+	MOUSE_9 = 8,
 
 	count,
 
 	MOUSE_LAST = MOUSE_8,
 	MOUSE_LEFT = MOUSE_1,
 	MOUSE_RIGHT = MOUSE_2,
-	MOUSE_MIDDLE = MOUSE_3
+	MOUSE_MIDDLE = MOUSE_3,
+	MOUSE_DOUBLE = MOUSE_9
 }
 
 enum keyModifier

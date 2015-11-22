@@ -26,3 +26,4 @@ public import graphics.hw.oglgame.fbo;
 public import graphics.hw.oglgame.sampler;
 public import graphics.hw.oglgame.rendercommands;
 public import graphics.hw.oglgame.state;
+public import graphics.hw.oglgame.cursor;

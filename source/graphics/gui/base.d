@@ -21,16 +21,27 @@ class Base : div
 	private div hover = null;
 	private uint width;
 	private uint height;
+	public float fontSize = 12.0f;
 
-	enum styleMember[] style = super.style ~ [styleMember("bounds", "t.bounds = t.windowBounds")];
+	//enum styleMember[] style = super.style ~ [styleMember("bounds", "t.bounds = windowBounds")];
+	mixin(customStyleMixin(`
+			bounds = windowBounds;
+		`));
 
 	public Rectangle windowBounds()
 	{
 		return Rectangle(0,0,Game.state.mainViewport.size.x, Game.state.mainViewport.size.y);
 	}
 
-	public void setUp(uint w, uint h, bool colorAsTexture = false)
+	public void setUp(this T)(uint w, uint h, bool colorAsTexture = false)
 	{
+		float f_size;
+		{
+			auto t = stylized(cast(T)this);
+			import std.stdio;
+			f_size = t.fontSize;
+		}
+
 		width = w;
 		height = h;
 
@@ -63,7 +74,10 @@ class Base : div
 		}
 
 		//graph = new simplegraphics(new Font("./assets/fonts/consola.ttf", 14.0f));
-		graph = new simplegraphics(new Font("./assets/fonts/SourceCodePro-Regular.otf", 12.0f));
+		graph = new simplegraphics(
+			new Font("./assets/fonts/SourceCodePro-Regular.otf", f_size),
+			new Font("./assets/fonts/fontawesome-webfont.ttf", f_size)
+			);
 
 		bounds.size.x = w;
 		bounds.size.y = h;
@@ -156,6 +170,7 @@ class Base : div
 
 		if(invalid){
 			doStylize();
+			doAfterStylize();
 
 			renderStateInfo state;
 			state.fbo = renderTarget;
@@ -170,6 +185,7 @@ class Base : div
 			Game.cmd(clear);
 
 			graph.setTarget(renderTarget, iRectangle(0, 0, width, height));
+			graph.resetDepth();
 			doDraw(graph, Rectangle(0, 0, bounds.size.x, bounds.size.y));
 			graph.flush();
 			
@@ -294,7 +310,6 @@ class Base : div
 			Game.swapBuffers();
 			if(Game.state.keyboard[key.ESCAPE]) break;
 		}
-
 	}
 }
 

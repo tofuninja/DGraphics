@@ -3,9 +3,11 @@
 import graphics.hw.enums;
 import graphics.hw.structs;
 import graphics.hw.renderlist;
- 
 import graphics.hw.oglgame.state;
 import graphics.hw.oglgame.sampler;
+import graphics.hw.oglgame.cursor;
+
+
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
 import derelict.freetype.ft;
@@ -14,23 +16,23 @@ import derelict.opengl3.gl3;
 public void swapBuffers()
 {
 	 
-	glfwSwapBuffers(oglgState.window);
-	state.shouldClose = glfwWindowShouldClose(oglgState.window) != 0;
+	glfwSwapBuffers(window);
+	state.shouldClose = glfwWindowShouldClose(window) != 0;
 	
 	// Calc fps
 	{
 		import std.datetime;
-		oglgState.frame++;
-		oglgState.totalFrames++;
-		if((Clock.currTime - oglgState.lastTime).total!"msecs" > 1000)
+		frame++;
+		totalFrames++;
+		if((Clock.currTime - lastTime).total!"msecs" > 1000)
 		{
-			oglgState.fps = oglgState.frame*(1000.0/(Clock.currTime - oglgState.lastTime).total!"msecs");
-			oglgState.lastTime = Clock.currTime;
-			oglgState.frame = 0;
+			fps = frame*(1000.0/(Clock.currTime - lastTime).total!"msecs");
+			lastTime = Clock.currTime;
+			frame = 0;
 		}
 		
-		state.fps = oglgState.fps;
-		state.totalFrames = oglgState.totalFrames;
+		state.fps = fps;
+		state.totalFrames = totalFrames;
 	}
 	
 	glfwPollEvents();
@@ -39,7 +41,7 @@ public void swapBuffers()
 public void cmd(drawCommand command) @nogc
 {
 	glDrawArraysInstancedBaseInstance(
-		oglgState.primMode, 
+		primMode, 
 		command.vertexOffset, 
 		command.vertexCount, 
 		command.instanceCount, 
@@ -50,10 +52,10 @@ public void cmd(drawCommand command) @nogc
 public void cmd(drawIndexedCommand command) @nogc
 {
 	glDrawElementsInstancedBaseVertexBaseInstance(
-		oglgState.primMode, 
+		primMode, 
 		command.vertexCount, 
-		oglgState.indexSize, 
-		cast(GLvoid*)(oglgState.indexOffset + command.indexOffset*oglgState.indexByteSize),
+		glindexSize, 
+		cast(GLvoid*)(indexOffset + command.indexOffset*indexByteSize),
 		command.instanceCount,
 		command.vertexOffset,
 		command.instanceOffset
@@ -62,13 +64,13 @@ public void cmd(drawIndexedCommand command) @nogc
 
 public void cmd(uboCommand command) @nogc
 {
-	assert(command.offset%(oglgState.uniformAlignment) == 0, "Invalid allignment");
+	assert(command.offset%(uniformAlignment) == 0, "Invalid allignment");
 	glBindBufferRange(GL_UNIFORM_BUFFER, command.location, command.ubo.id, command.offset, command.size);
 }
 
 public void cmd(vboCommand command) @nogc
 {
-	with(oglgState.curRenderState)
+	with(curRenderState)
 	{
 		glVertexArrayVertexBuffer(vao.id, command.location, command.vbo.id, command.offset, command.stride);
 	}
@@ -76,20 +78,20 @@ public void cmd(vboCommand command) @nogc
 
 public void cmd(iboCommand command) @nogc
 {
-	with(oglgState.curRenderState)
+	with(curRenderState)
 	{
 		glVertexArrayElementBuffer(vao.id, command.ibo.id);
 	}
 	
 	switch(command.size)
 	{
-		case indexSize.uint8: 	oglgState.indexSize = GL_UNSIGNED_BYTE; 	oglgState.indexByteSize = 1; break;
-		case indexSize.uint16: 	oglgState.indexSize = GL_UNSIGNED_SHORT; 	oglgState.indexByteSize = 2; break;
-		case indexSize.uint32: 	oglgState.indexSize = GL_UNSIGNED_INT; 		oglgState.indexByteSize = 4; break;
+		case indexSize.uint8: 	glindexSize = GL_UNSIGNED_BYTE; 	indexByteSize = 1; break;
+		case indexSize.uint16: 	glindexSize = GL_UNSIGNED_SHORT; 	indexByteSize = 2; break;
+		case indexSize.uint32: 	glindexSize = GL_UNSIGNED_INT; 		indexByteSize = 4; break;
 		default: assert(false, "Wut?");
 	}
 	
-	oglgState.indexOffset = command.offset;
+	indexOffset = command.offset;
 }
 
 public void cmd(textureType T)(texCommand!T command) @nogc
@@ -126,7 +128,7 @@ public void cmd(blitCommand command) @nogc
 	
 	glBlitNamedFramebuffer(
 		command.fbo.id, 
-		oglgState.curRenderState.fbo.id, 
+		curRenderState.fbo.id, 
 		command.source.loc.x, 
 		command.source.loc.y, 
 		command.source.loc.x + command.source.size.x,
@@ -157,24 +159,29 @@ public void cmd(renderStateInfo command) @nogc
 	oglgApplyStateDif(command);
 }
 
+public void cmd(cursorRef command) @nogc
+{
+	glfwSetCursor(window, command.obj);
+}
+
 
 /**
  * Apply the state, but only change the things that need to be changed
  */
 package void oglgApplyStateDif(renderStateInfo state) @nogc
 {
-	with(oglgState.curRenderState)
+	with(curRenderState)
 	{
 		if(state.mode != mode)
 		{
 			switch(state.mode)
 			{
-				case renderMode.points: 		oglgState.primMode = GL_POINTS;			break;
-				case renderMode.lines: 			oglgState.primMode = GL_LINES;			break;
-				case renderMode.triangles: 		oglgState.primMode = GL_TRIANGLES;		break;
-				case renderMode.patches: 		oglgState.primMode = GL_PATCHES;		break;
-				case renderMode.lineStrip: 		oglgState.primMode = GL_LINE_STRIP;		break;
-				case renderMode.triangleStrip:	oglgState.primMode = GL_TRIANGLE_STRIP;	break;
+				case renderMode.points: 		primMode = GL_POINTS;			break;
+				case renderMode.lines: 			primMode = GL_LINES;			break;
+				case renderMode.triangles: 		primMode = GL_TRIANGLES;		break;
+				case renderMode.patches: 		primMode = GL_PATCHES;		break;
+				case renderMode.lineStrip: 		primMode = GL_LINE_STRIP;		break;
+				case renderMode.triangleStrip:	primMode = GL_TRIANGLE_STRIP;	break;
 				default: assert(false, "Wut?");
 			}
 		}
@@ -259,7 +266,7 @@ package void oglgApplyStateDif(renderStateInfo state) @nogc
 		}
 	}
 
-	oglgState.curRenderState = state;
+	curRenderState = state;
 }
 
 private GLenum blendModeToEnum(blendMode mode) @nogc

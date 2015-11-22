@@ -3,18 +3,17 @@
 import graphics.hw.enums;
 import graphics.hw.structs;
 import graphics.hw.renderlist;
+import graphics.hw.oglgame.cursor;
 import math.matrix;
 import util.event;
-
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
 import derelict.freetype.ft;
 import derelict.opengl3.gl3;
 import derelict.assimp3.assimp;
+import std.datetime;
 
 
-
-package oglgStateObj oglgState;
 public gameStateInfo state;
 public Event!(key, keyModifier, bool) onKey;
 public Event!(dchar) onChar;
@@ -23,48 +22,49 @@ public Event!(vec2, mouseButton, bool) onMouseClick;
 public Event!(vec2) onWindowSize;
 public Event!(int) onScroll;
 
+package renderStateInfo curRenderState;
+package GLenum primMode 	= GL_TRIANGLES;
+package GLenum glindexSize 	= GL_UNSIGNED_INT;
+package uint uniformAlignment;
+package uint indexByteSize 	= 4;
+package uint indexOffset 	= 0;
+package GLFWwindow* window 	= null;
+package int frame = 0;
+package SysTime lastTime;
+package float fps = 0;
+package uint totalFrames = 0;
+package FT_Library ftlibrary;
+package SysTime double_click_timer;
+package bool oglg_inited = false;
+package shared bool libs_loaded = false;
 
 private enum OPENGL_DEBUG = false;
+
 
  
 version(Windows)
 {
-	enum glfw_dll 	= "glfw3.dll";
-	enum fi_dll 	= "Freeimage.dll";
-	enum ft_dll 	= "freetype.dll";
-	enum assimp_dll	= "assimp.dll";
+	package enum glfw_dll 	= "glfw3.dll";
+	package enum fi_dll 	= "Freeimage.dll";
+	package enum ft_dll 	= "freetype.dll";
+	package enum assimp_dll	= "assimp.dll";
 }
 else version(linux)
 {
 	static assert(false); // TODO Not testsed
-	enum glfw_dll 	= "libglfw3.so";
-	enum fi_dll 	= "libfreeimage.so";
-	enum ft_dll 	= "libfreetype.so";
-	enum assimp_dll	= "libassimp.so";
+	package enum glfw_dll 	= "libglfw3.so";
+	package enum fi_dll 	= "libfreeimage.so";
+	package enum ft_dll 	= "libfreetype.so";
+	package enum assimp_dll	= "libassimp.so";
 }
 else
 {
 	static assert(false);
 }
 
-/**
- * Keeps track of all oglg state
- */
-package struct oglgStateObj
+static ~this()
 {
-	import std.datetime;
-	renderStateInfo curRenderState;
-	GLenum primMode 	= GL_TRIANGLES;
-	GLenum indexSize 	= GL_UNSIGNED_INT;
-	uint uniformAlignment;
-	uint indexByteSize 	= 4;
-	uint indexOffset 	= 0;
-	GLFWwindow* window 	= null;
-	int frame = 0;
-	SysTime lastTime;
-	float fps = 0;
-	uint totalFrames = 0;
-	FT_Library ftlibrary;
+	deInit();
 }
 
 /**
@@ -77,18 +77,33 @@ public void init(gameInitInfo info)
 {
 	initLibs();
 	intiWindow(info);
+	initCursors();
 	initPrivateState();
 	initPublicState();
+	oglg_inited = true;
 }
 
 public void deInit()
 {
+	import std.stdio;
+	import std.concurrency;
+	import derelict.opengl3.gl;
+	if(!oglg_inited) return;
+	glfwDestroyWindow(window);
+	//DerelictASSIMP3.unload();
+	//DerelictFT.unload();
+	//DerelictFI.unload();
+	//DerelictGLFW3.unload();
+	//DerelictGL3.unload();
+	//DerelictGL.unload();
 }
 
 public renderStateInfo renderState()
 {
-	return oglgState.curRenderState;
+	return curRenderState;
 }
+
+
 
 
 /**
@@ -102,14 +117,16 @@ public renderStateInfo renderState()
 private void initLibs()
 {
 	import graphics.image;
-	import derelict.opengl3.gl;
 
-	DerelictGL.load();
-	DerelictGL3.load();
-	DerelictGLFW3.load(["./libs/" ~ glfw_dll]);
-	DerelictFI.load(["./libs/" ~ fi_dll]);
-	DerelictFT.load(["./libs/" ~ ft_dll]);
-	DerelictASSIMP3.load(["./libs/" ~ assimp_dll]);
+	if(!libs_loaded)
+	{
+		DerelictGL3.load();
+		DerelictGLFW3.load(["./libs/" ~ glfw_dll]);
+		DerelictFI.load(["./libs/" ~ fi_dll]);
+		DerelictFT.load(["./libs/" ~ ft_dll]);
+		DerelictASSIMP3.load(["./libs/" ~ assimp_dll]);
+		libs_loaded = true;
+	}
 
 	// set free image error handeler
 	FreeImage_SetOutputMessage(&freeImgErrorHandler);
@@ -118,13 +135,13 @@ private void initLibs()
 	// Init free type
 	{
 		import graphics.font;
-		auto error = FT_Init_FreeType( &oglgState.ftlibrary);
+		auto error = FT_Init_FreeType( &ftlibrary);
 		if ( error )
 		{
 			import std.conv;
 			throw new Exception("Freetype faild to init: " ~ error.to!string);
 		}
-		Font.ftlibrary = oglgState.ftlibrary;
+		Font.ftlibrary = ftlibrary;
 	}
 	
 	// Start GLFW3
@@ -138,17 +155,16 @@ private void initLibs()
  */
 private void intiWindow(gameInitInfo info)
 {
-	import derelict.opengl3.gl;
+	//import derelict.opengl3.gl;
 
 	glfwWindowHint(GLFW_RESIZABLE, info.resizeable?GL_TRUE:GL_FALSE);
 	glfwWindowHint(GLFW_DECORATED, info.boarder?GL_TRUE:GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, info.show?GL_TRUE:GL_FALSE);
-	auto window = glfwCreateWindow(info.size.x,info.size.y, info.title.ptr, info.fullscreen?(glfwGetPrimaryMonitor()):null, null);
-	if (!window) return;
-	glfwMakeContextCurrent(window);
+	auto win = glfwCreateWindow(info.size.x,info.size.y, info.title.ptr, info.fullscreen?(glfwGetPrimaryMonitor()):null, null);
+	if (!win) return;
+	glfwMakeContextCurrent(win);
 	DerelictGL3.reload();
-	DerelictGL.reload();
-	oglgState.window = window;
+	window = win;
 	
 	// Call backs
 	{
@@ -179,12 +195,12 @@ private void initPublicState()
 {
 	state.initialized = true;
 	state.keyboard[] = false;
-	state.uniformAlignment = oglgState.uniformAlignment;
+	state.uniformAlignment = uniformAlignment;
 	state.shouldClose = false;
 
 	import math.geo.rectangle;
 	int w,h;
-	glfwGetFramebufferSize(oglgState.window, &w, &h);
+	glfwGetFramebufferSize(window, &w, &h);
 	state.mainViewport = iRectangle(0,0,w,h);
 }
 
@@ -193,7 +209,7 @@ private void initPublicState()
  */
 private void initPrivateState()
 {
-	with(oglgState.curRenderState)
+	with(curRenderState)
 	{
 		import math.geo.rectangle : iRectangle;
 		mode 			= renderMode.triangles;
@@ -212,13 +228,14 @@ private void initPrivateState()
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &ualign);
 		if(ualign <= 0)
 		{
-			oglgState.uniformAlignment = 1;
+			uniformAlignment = 1;
 		}
 		else 
 		{
-			oglgState.uniformAlignment = ualign;
+			uniformAlignment = ualign;
 		}
-		oglgState.lastTime = Clock.currTime;
+		lastTime = Clock.currTime;
+		double_click_timer = Clock.currTime;
 	}
 	
 	glViewport(0, 0, 1, 1);
@@ -251,7 +268,7 @@ public void printLibVersions(alias writeln)()
 	// print freetype version
 	{
 		int maj, min, pat;
-		FT_Library_Version(oglgState.ftlibrary, &maj, &min, &pat);
+		FT_Library_Version(ftlibrary, &maj, &min, &pat);
 		writeln("FreeType Version: ", maj, ".", min, ".", pat);
 	}
 }
@@ -277,7 +294,19 @@ private extern(C) void oglg_mouse_scroll(GLFWwindow* window, double x, double y)
 private extern(C) void oglg_mouse_button(GLFWwindow* window, int button, int action, int mods) nothrow
 {
 	try{
+		import std.conv;
 		state.mouseButtons[button] = (action == GLFW_PRESS);
+
+		if(action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT)
+		{
+			if(Clock.currTime - double_click_timer < state.doubleClick)
+			{
+				onMouseClick(state.mousePos, mouseButton.MOUSE_DOUBLE, true);
+				return;
+			}
+			double_click_timer = Clock.currTime;
+		}
+
 		onMouseClick(state.mousePos, cast(mouseButton)button, action == GLFW_PRESS);
 	}
 	catch(Exception e) {}
@@ -299,7 +328,7 @@ private extern(C) void oglg_window_size_callback(GLFWwindow* window, int width, 
 	import math.geo.rectangle;
 	try{
 		int w,h;
-		glfwGetFramebufferSize(oglgState.window, &w, &h);
+		glfwGetFramebufferSize(window, &w, &h);
 		state.mainViewport = iRectangle(0,0,w,h);
 		onWindowSize(vec2(w,h));
 	}
@@ -310,10 +339,10 @@ private extern(C) void oglg_keyCallBack(GLFWwindow* window, int keycode, int sca
 {
 	if(keycode >= 0 && keycode <= GLFW_KEY_LAST)
 	{
-		state.keyboard[keycode] = (action == GLFW_PRESS);
+		state.keyboard[keycode] = (action == GLFW_PRESS || action == GLFW_REPEAT);
 		try
 		{
-			onKey(cast(key)keycode,cast(keyModifier)mods, action == GLFW_PRESS);
+			onKey(cast(key)keycode,cast(keyModifier)mods, action == GLFW_PRESS || action == GLFW_REPEAT);
 		}
 		catch(Exception e) {}
 	}

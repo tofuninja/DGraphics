@@ -1,4 +1,4 @@
-﻿module graphics.batchRender.batcher;
+﻿ module graphics.batchRender.batcher;
 
 mixin template Batcher(uint batchSize, ARGS...)
 {

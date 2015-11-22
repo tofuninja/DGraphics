@@ -101,22 +101,23 @@ class nameLookUpNode : expressionNode
 {
 	string[] names;
 	bool sty;
-	this(string[] Names, bool stylize = false)
+	this(string[] Names, bool insert_t = false)
 	{
 		names = Names;
-		sty = stylize;
+		sty = insert_t;
 	}
 
 	override string expressionMixin()
 	{
-		string r = "(t"; 
+		string r = "";//"(t"; 
 
-		if(sty)
-			foreach(string id; names) r ~= ".getStylizedProperty!\"" ~ id ~ "\"()";
-		else
-			foreach(string id; names) r ~= "." ~ id;
+		//if(sty)
+		//	foreach(string id; names) r ~= ".getStylizedProperty!\"" ~ id ~ "\"()";
+		//else
+		foreach(string id; names) r ~= "." ~ id;
 
-		return r ~ ")";
+		if(sty) return "(t" ~ r ~ ")";
+		else return "(style_t" ~ r ~ ")";
 	}
 
 	mixin(astToString("nameLookUpNode", "names"));
