@@ -1,4 +1,4 @@
-﻿module graphics.batchRender.textBatch;
+module graphics.batchRender.glyphBatch;
 
 import graphics.batchRender.batcher;
 import math.geo.rectangle;
@@ -6,15 +6,13 @@ import math.matrix;
 import graphics.hw.game;
 import graphics.color;
 import graphics.font;
-import std.stdio;
 
-private bool inited = false;
-private enum batchSize = 1024;
-private bufferRef tri;
-private vaoRef vao;
-private shaderRef shade;
-
-private vector[batchSize] tempData;
+private bool 				inited 		= false;
+private enum 				batchSize 	= 1024*10;
+private bufferRef 			gpu_buffer;
+private vaoRef 				vao;
+private shaderRef 			shade;
+private vector[batchSize] 	tempData;
 
 private struct vector
 {
@@ -25,6 +23,8 @@ private struct vector
 	float depth;
 }
 
+
+// Init the needed render objects, vbo, shader, vao... 
 private void init()
 {
 	assert(Game.state.initialized); 
@@ -35,7 +35,7 @@ private void init()
 		info.size 		= (vector.sizeof)*batchSize;
 		info.dynamic 	= true;
 		info.data 		= null;
-		tri 			= Game.createBuffer(info);
+		gpu_buffer 		= Game.createBuffer(info);
 	}
 	
 	// Create VAO
@@ -133,9 +133,9 @@ private void init()
 	inited = true;
 }
 
-struct textBatch
+struct GlyphBatch
 {
-	mixin Batcher!(batchSize, dstring, vec2, Color, float, Rectangle);
+	mixin Batcher!(batchSize, Glyph*, vec2, Color, float, Rectangle);
 	iRectangle viewport;
 	fboRef fbo;
 	Font font;
@@ -143,6 +143,8 @@ struct textBatch
 	private void doBatch(T)(T range)
 	{
 		if(!inited) init();
+		//if(glyphBatchCount >= 3) return;
+		// Render state for drawing chars 
 		renderStateInfo state;
 		state.mode = renderMode.triangleStrip;
 		state.vao = vao;
@@ -161,7 +163,7 @@ struct textBatch
 		Game.cmd(state);
 		
 		vboCommand bind;
-		bind.vbo = tri;
+		bind.vbo = gpu_buffer;
 		bind.stride = vector.sizeof;
 		Game.cmd(bind);
 
@@ -169,13 +171,13 @@ struct textBatch
 		tex.location = 0;
 		tex.texture = font.texture;
 		Game.cmd(tex);
-		
+
 		void flushBatch(int count)
 		{
 			bufferSubDataInfo sub;
 			sub.data = tempData[0..count];
 			sub.offset = 0;
-			tri.subData(sub);
+			gpu_buffer.subData(sub);
 			
 			drawCommand draw;
 			draw.vertexCount = 4;
@@ -184,77 +186,54 @@ struct textBatch
 		}
 
 
-		vec2 screen = cast(vec2)viewport.size;
-		float tabWidth = font.glyphs[' '].advance.x * 5; // Width of 5 spaces
+		vec2 screen_size = cast(vec2)viewport.size;
 
 		int i = 0;
 		foreach(b; range)
 		{
-			dstring s = b[0];
-			vec2 textloc = b[1];
-
-			// Align it to a pixel to improve text quality
-			textloc.x = cast(int)textloc.x;
-			textloc.y = cast(int)textloc.y;
-			Color c = b[2];
-			float depth = b[3];
-			Rectangle scissor = b[4];
-			scissor.loc = (scissor.loc*2)/screen - vec2(1,1);
-			scissor.size = (scissor.size*2)/screen;
-			vec2 lineStart = textloc;
-			int lineCount = 0; 
-			foreach(dc; s)
+			// Flush if we need too
+			if(i == batchSize)
 			{
-				if(i == batchSize)
-				{
-					flushBatch(i);
-					i = 0;
-				}
-
-
-
-				// Special chars
-				if(dc == '\r') continue;
-				if(dc == '\n') {
-					lineCount++;
-					textloc = lineStart + vec2(0, font.lineHeight*lineCount);
-					continue;
-				}
-				if(dc == '\t')
-				{
-					import std.math;
-					textloc.x = ceil((textloc.x + 1 - lineStart.x)/tabWidth)*tabWidth + lineStart.x;
-					continue;
-				}
-
-
-
-				auto gp = dc in font.glyphs;
-				Glyph g;
-				if(gp) 	g = *gp;
-				else 	g = font.glyphs['█'];
-
-				vec2 texSize = cast(vec2)font.texture.size.xy;
-				vec2 texLoc = (cast(vec2)g.extent.loc)/texSize;
-				vec2 texExt = (cast(vec2)g.extent.size - vec2(2,2))/texSize;
-
-				vec2 offset = (cast(vec2)g.offset); 
-				vec2 pen = textloc + offset;
-				vec2 loc = (pen*2)/screen - vec2(1,1);
-				vec2 size = ((cast(vec2)g.extent.size - vec2(2,2))*2)/(viewport.size);
-
-				textloc = textloc + cast(vec2)g.advance;
-
-				tempData[i].rectangle.xy = loc;
-				tempData[i].rectangle.zw = size;
-				tempData[i].uvrectangle.xy = texLoc;
-				tempData[i].uvrectangle.zw = texExt;
-				tempData[i].color = c.to!vec4();
-				tempData[i].depth = depth;
-				tempData[i].scissor.xy = scissor.loc;
-				tempData[i].scissor.zw = scissor.size;
-				i++;
+				flushBatch(i);
+				i = 0;
 			}
+
+			// Give the args names
+			Glyph* g 			= b[0];
+			vec2 loc			= b[1];
+			Color char_color 	= b[2];
+			float depth 		= b[3];
+			Rectangle scissor 	= b[4];
+
+			// Align loc to a pixel to improve text quality, looks bad if dont
+			loc.x = cast(int)loc.x;
+			loc.y = cast(int)loc.y;
+			scissor.loc = (scissor.loc*2)/screen_size - vec2(1,1);
+			scissor.size = (scissor.size*2)/screen_size;
+			
+			// Check if we have a glyph for the char we are trying to draw
+			if(g == null) 	continue; // Cant draw it so move on
+
+			vec2 fontmap_size 		= cast(vec2)font.texture.size.xy; 						// size of the font texture
+			vec2 fontmap_char_loc 	= (cast(vec2)g.extent.loc)/fontmap_size;				// location of the char in the font map texture
+			vec2 fontmap_char_size 	= (cast(vec2)g.extent.size - vec2(2,2))/fontmap_size;	// size of the char in the font map texture 
+
+			// Calculate the screen loc and size for the char
+			vec2 char_offset 	= (cast(vec2)g.offset); 
+			vec2 char_pen 		= loc + char_offset;
+			vec2 onscreen_loc 	= (char_pen*2)/screen_size - vec2(1,1);
+			vec2 onscreen_size 	= ((cast(vec2)g.extent.size - vec2(2,2))*2)/(viewport.size);
+
+			// Put the render args into the vector array to be flushed later on 
+			tempData[i].rectangle.xy = onscreen_loc;
+			tempData[i].rectangle.zw = onscreen_size;
+			tempData[i].uvrectangle.xy = fontmap_char_loc;
+			tempData[i].uvrectangle.zw = fontmap_char_size;
+			tempData[i].color = char_color.to!vec4();
+			tempData[i].depth = depth;
+			tempData[i].scissor.xy = scissor.loc;
+			tempData[i].scissor.zw = scissor.size;
+			i++;
 		}
 		flushBatch(i);
 	}
