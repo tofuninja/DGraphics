@@ -5,3 +5,4 @@ dub.selections.json
 .dub/*
 Thumbs.db
 *.pdb
+*.suo
