@@ -21,12 +21,12 @@ public enum NoPropertyPane;
 
 class PropertyPane : Scrollbox
 {
-	
+	public Event!(div) onValueChange;
 	public void setData(T)(ref T t)
 	{
 		alias prop = getPropPane!T; 
 		T* pointer = &t;
-		auto d = new prop(pointer);
+		auto d = new prop(pointer, this);
 
 		this.childrenList.clear();
 		this.childrenList.insert(horz);
@@ -43,6 +43,11 @@ class PropertyPane : Scrollbox
 		this.childrenList.insert(vert);
 		this.scroll = vec2(0,0);
 	}
+
+	public void doValueChange()
+	{
+		onValueChange(this);
+	}
 }
 
 private template getPropPane(T)
@@ -52,7 +57,8 @@ private template getPropPane(T)
 		is(T.PropertyPane : div) && 
 		__traits(compiles, function(){
 			T* t = null;
-			auto p = new T.PropertyPane(t); // Ensure that the property pane type has a constructor that takes a pointer
+			PropertyPane owner = new PropertyPane();
+			auto p = new T.PropertyPane(t, owner); // Ensure that the property pane type has a constructor that takes a pointer
 		}))
 		alias getPropPane = T.PropertyPane;
 	else static if(is(TypePropertyPane!T))
@@ -64,13 +70,15 @@ private template getPropPane(T)
 class DefaultPropertyPane(T) : VerticalArrangement
 {
 	private enum margin_size = 20;
+	private PropertyPane owner;
 	public dstring display_name = Unqual!(T).stringof;
 
 	private T* data;
 
-	this(T* pointer)
+	this(T* pointer, PropertyPane owner)
 	{
 		data = pointer;
+		this.owner = owner;
 	}
 
 	protected override void initProc()
@@ -103,7 +111,7 @@ class DefaultPropertyPane(T) : VerticalArrangement
 					alias MemT = typeof(mixin("T." ~ m));
 					alias prop = getPropPane!MemT; 
 					MemT* pointer = &mixin("(*data)." ~ m);
-					auto d = new prop(pointer);
+					auto d = new prop(pointer, owner);
 
 					// Add a name label
 					auto l = new customLabel();
@@ -155,11 +163,12 @@ private class customLabel : Label {
 import graphics.gui.textbox;
 class TypePropertyPane(T) : Textbox if(isSomeString!T)
 {
-	
+	private PropertyPane owner;
 	T* data;
-	this(T* pointer)
+	this(T* pointer, PropertyPane owner)
 	{
 		import std.conv;
+		this.owner = owner;
 		data = pointer;
 		if(pointer != null) value = to!dstring(*pointer);
 	}
@@ -176,7 +185,10 @@ class TypePropertyPane(T) : Textbox if(isSomeString!T)
 	override public void invalidate()
 	{
 		import std.conv;
-		if(data != null) *data = to!T(this.value);
+		if(data != null) {
+			*data = to!T(this.value);
+			owner.doValueChange();
+		}
 		super.invalidate();
 	}
 }
@@ -191,10 +203,12 @@ class TypePropertyPane(T) : Textbox if(isSomeString!T)
 //	                                                         |_|                  |___/                       
 class TypePropertyPane(T) : Textbox if(isNumeric!T)
 {
+	private PropertyPane owner;
 	T* data;
-	this(T* pointer)
+	this(T* pointer, PropertyPane owner)
 	{
 		import std.conv;
+		this.owner = owner;
 		data = pointer;
 		if(pointer != null) value = to!dstring(*pointer);
 	}
@@ -210,6 +224,7 @@ class TypePropertyPane(T) : Textbox if(isNumeric!T)
 			{
 				*data = T.init;
 			}
+			owner.doValueChange();
 		}
 		super.invalidate();
 	}
@@ -357,14 +372,16 @@ private struct vecPass(T, int L)
 class TypePropertyPane(T) : DefaultPropertyPane!(vecPass!(T.elementType, T.rows))
 	if(isMatrix!T && T.isVector && T.rows >= 1 && T.rows <= 4)
 {
+	private PropertyPane owner;
 	alias vp = vecPass!(T.elementType, T.rows);
 	alias L = T.rows;
 	vp v;
 	T* data;
 
-	this(T* pointer)
+	this(T* pointer,  PropertyPane owner)
 	{
 		import std.conv;
+		this.owner = owner;
 		display_name = "vec" ~ L.to!dstring;
 		data = pointer;
 		if(pointer == null) super(null);
@@ -380,6 +397,8 @@ class TypePropertyPane(T) : DefaultPropertyPane!(vecPass!(T.elementType, T.rows)
 			static if( L > 1 ) data.y = v.y;
 			static if( L > 2 ) data.z = v.z;
 			static if( L > 3 ) data.w = v.w;
+
+			owner.doValueChange();
 		}
 	}
 }
@@ -397,11 +416,13 @@ class TypePropertyPane(T) : DefaultPropertyPane!(vecPass!(T.elementType, T.rows)
 class TypePropertyPane(T) : getPropPane!(PointerTarget!T)
 	if(isPointer!T)
 {
+	private PropertyPane owner;
 	alias Target = PointerTarget!T;
-	this(T* pointer)
+	this(T* pointer, PropertyPane owner)
 	{
-		if(pointer == null) super(null);
-		else super(*pointer);
+		this.owner = owner;
+		if(pointer == null) super(null, owner);
+		else super(*pointer, owner);
 	}
 }
 

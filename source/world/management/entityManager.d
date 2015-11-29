@@ -1,6 +1,9 @@
-module world.entityManager;
+module world.management.entityManager;
 import world.entity;
 import container.clist;
+
+
+
 class EntityManager
 {
 	private CList!Entity entity_list;

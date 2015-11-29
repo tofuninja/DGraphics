@@ -17,6 +17,7 @@ import graphics.gui.panel;
 import graphics.gui.verticalSplit;
 
 import world.entity;
+import world.component;
 
 mixin loadUIString!(`
 Panel entityprop_div
@@ -101,8 +102,6 @@ private class componentList_div : TreeView!Component
 
 		foreach(Component c; e.components)
 		{
-			import editor.io;
-			writeln("test", c.name);
 		 	auto dat = tree.Data();
 		 	dat.obj = c;
 		 	dat.text = {

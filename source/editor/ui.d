@@ -29,14 +29,25 @@ public void startEditor()
 	Game.printLibVersions!writeln();
 	writeln("\nType \"help\" for a list of commands");
 	
-
 	{
-		import world.entity;
-		Entity e = new Entity(0);
-		e.name = "Test Entity";
-		e.addComponent(new testComponent());
-		auto props = editor_ui.get!"entityProps";
-		props.setEntity(e);
+		struct test{
+			int foo;
+			float bar;
+			char[] arr;
+		}
+
+		test t;
+		t.foo = 12;
+		t.bar = 3.1415926f;
+		t.arr = ['a','b'];
+
+		import util.serial;
+		auto arr = Serialize(t);
+		writeln(arr);
+		writeln(arr.length);
+		test t2;
+		Deserialize(t2, arr);
+		writeln(t2);
 	}
 
 	editor_ui.run();

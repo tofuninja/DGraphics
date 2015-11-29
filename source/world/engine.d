@@ -1,6 +1,7 @@
 module world.engine;
 
-struct Engine
+
+class Engine
 {
 	
 }
