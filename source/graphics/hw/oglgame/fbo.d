@@ -2,12 +2,10 @@
 
 import graphics.hw.enums;
 import graphics.hw.structs;
-import graphics.hw.renderlist;
  
 import graphics.hw.oglgame.state;
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
-import derelict.freetype.ft;
 import derelict.opengl3.gl3;
 
 public struct fboRef
@@ -17,7 +15,7 @@ public struct fboRef
 	// TODO add a getter for getteing framebuffer contents
 }
 
-public fboRef createFbo(fboCreateInfo info) @nogc
+public fboRef createFbo(hwFboCreateInfo info) @nogc
 {
 	fboRef r;
 	GLenum[8] DrawBuffers;
@@ -27,22 +25,17 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
 	// Attach colors
-	for(int i = 0; i < 8; i++)
-	{
-		if(info.colors[i].enabled == false)
-		{
+	for(int i = 0; i < 8; i++) {
+		if(info.colors[i].enabled == false) {
 			DrawBuffers[i] = GL_NONE;
 			continue;
 		}
 
 		auto id = info.colors[i].tex.id;
 		
-		if(!info.colors[i].tex.isRenderBuffer)
-		{
+		if(!info.colors[i].tex.isRenderBuffer) {
 			glNamedFramebufferTexture(r.id, GL_COLOR_ATTACHMENT0 + i, id, 0);
-		}
-		else 
-		{
+		} else {
 			glNamedFramebufferRenderbuffer(r.id, GL_COLOR_ATTACHMENT0 + i, GL_RENDERBUFFER, id);
 		}
 		
@@ -50,20 +43,16 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 	}
 	
 	// Attach Depth and Stencil
-	if(info.depthstencil.enabled)
-	{
+	if(info.depthstencil.enabled) {
 		// If depthstencil enabled, ignore the depth and stencil settings
 		auto id = info.depthstencil.tex.id;
 		if(!info.depthstencil.tex.isRenderBuffer)
 			glNamedFramebufferTexture(r.id, GL_DEPTH_STENCIL_ATTACHMENT, id, 0);
 		else 
 			glNamedFramebufferRenderbuffer(r.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, id);
-	}
-	else
-	{
+	} else {
 		// Depth
-		if(info.depth.enabled)
-		{
+		if(info.depth.enabled) {
 			auto id = info.depth.tex.id;
 			if(!info.depth.tex.isRenderBuffer)
 				glNamedFramebufferTexture(r.id, GL_DEPTH_ATTACHMENT, id, 0);
@@ -72,8 +61,7 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 		}
 		
 		// Stencil
-		if(info.depth.enabled)
-		{
+		if(info.depth.enabled) {
 			auto id = info.stencil.tex.id;
 			if(!info.stencil.tex.isRenderBuffer)
 				glNamedFramebufferTexture(r.id, GL_STENCIL_ATTACHMENT, id, 0);
@@ -85,10 +73,8 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 	glNamedFramebufferDrawBuffers(r.id, DrawBuffers.length, DrawBuffers.ptr);
 
 	auto error = glCheckNamedFramebufferStatus(r.id, GL_FRAMEBUFFER);
-	if(error != GL_FRAMEBUFFER_COMPLETE)
-	{
-		switch(error)
-		{
+	if(error != GL_FRAMEBUFFER_COMPLETE) {
+		switch(error) {
 			case GL_FRAMEBUFFER_UNDEFINED : 						assert(false, "GL_FRAMEBUFFER_UNDEFINED");
 			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : 			assert(false, "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
 			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT : 	assert(false, "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
@@ -100,7 +86,7 @@ public fboRef createFbo(fboCreateInfo info) @nogc
 			default : 												assert(false, "Unknown framebuffer error");
 		} 
 	}
-
+	oglgCheckError();
 	return r;
 }
 
@@ -108,4 +94,5 @@ public void destroyFbo(ref fboRef obj) @nogc
 {
 	glDeleteFramebuffers(1, &obj.id);
 	obj.id = 0;
+	oglgCheckError();
 }

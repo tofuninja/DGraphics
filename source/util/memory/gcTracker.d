@@ -16,9 +16,9 @@
     startTrackingAllocs() and stopTrackingAllocs().
 
 */
+ 
 
-
-import std.stdio, core.memory, std.c.string, std.traits, std.range, std.algorithm;
+import std.stdio, core.memory, core.stdc.string, std.traits, std.range, std.algorithm;
 
 //stats
 __gshared ulong allocs_mc = 0; // numbers of calls for malloc, qalloc and calloc
@@ -63,10 +63,9 @@ auto GCTracker(File logFile = stdout) // RAII version: starts tracking now, ends
 private: //////////////////////////////////////////////////////////////////////
 alias BlkInfo = GC.BlkInfo;
 
-struct Proxy // taken from proxy.d (d runtime)
+struct Proxy // taken from proxy.d (d runtime); 
 {
-	extern (C)
-	{
+	extern (C) {
 		void function() gc_enable;
 		void function() gc_disable;
 		void function() gc_collect;
@@ -173,46 +172,46 @@ version(unittest) {
 	}
 }
 
-unittest {
-	//make sure our way to get pproxy works
-	initGcProxy();
-	myProxy.gc_addRoot = &genNop!"gc_addRoot";
-	myProxy.gc_addRange = &genNop!"gc_addRange";
-	myProxy.gc_removeRoot = &genNop!"gc_removeRoot";
-	myProxy.gc_removeRange = &genNop!"gc_removeRange";
-	assert(*pproxy == null);
-	gc_setProxy(&myProxy);
-	assert(*pproxy == &myProxy);
-	gc_clrProxy();
-	assert(*pproxy == null);
-	writeln("pproxy test OK");
-	memset(&myProxy, 0, Proxy.sizeof);
-}
+//unittest {
+//	//make sure our way to get pproxy works
+//	initGcProxy();
+//	myProxy.gc_addRoot = &genNop!"gc_addRoot";
+//	myProxy.gc_addRange = &genNop!"gc_addRange";
+//	myProxy.gc_removeRoot = &genNop!"gc_removeRoot";
+//	myProxy.gc_removeRange = &genNop!"gc_removeRange";
+//	assert(*pproxy == null);
+//	gc_setProxy(&myProxy);
+//	assert(*pproxy == &myProxy);
+//	gc_clrProxy();
+//	assert(*pproxy == null);
+//	writeln("pproxy test OK");
+//	memset(&myProxy, 0, Proxy.sizeof);
+//}
 
-unittest {
-	clearAllocStats();
-	auto atr = GCTracker();
-	assert(allocs_qsz == 0 && allocs_qc == 0);
-	auto arr = new int[32];
-	assert(allocs_qsz == 129 && allocs_qc == 1);
-	writeln("allocsTracker() and new int[] test OK");
-}
+//unittest {
+//	clearAllocStats();
+//	auto atr = GCTracker();
+//	assert(allocs_qsz == 0 && allocs_qc == 0);
+//	auto arr = new int[32];
+//	assert(allocs_qsz == 129 && allocs_qc == 1);
+//	writeln("allocsTracker() and new int[] test OK");
+//}
 
-unittest {
-	clearAllocStats();
-	startTrackingAllocs(stderr);
-	assert(allocs_qsz == 0 && allocs_qc == 0);
-	auto arr = new int[32];
-	assert(allocs_qsz == 129 && allocs_qc == 1);
-	stopTrackingAllocs();
+//unittest {
+//	clearAllocStats();
+//	startTrackingAllocs(stderr);
+//	assert(allocs_qsz == 0 && allocs_qc == 0);
+//	auto arr = new int[32];
+//	assert(allocs_qsz == 129 && allocs_qc == 1);
+//	stopTrackingAllocs();
 	
-	auto arr2 = new int[42];
-	assert(allocs_qsz == 129 && allocs_qc == 1);
+//	auto arr2 = new int[42];
+//	assert(allocs_qsz == 129 && allocs_qc == 1);
 	
-	startTrackingAllocs(stderr);
-	auto arr3 = new byte[10];
-	assert(allocs_qsz != 129 && allocs_qc != 1);
-	stopTrackingAllocs();
+//	startTrackingAllocs(stderr);
+//	auto arr3 = new byte[10];
+//	assert(allocs_qsz != 129 && allocs_qc != 1);
+//	stopTrackingAllocs();
 	
-	writeln("startTrackingAllocs() and new int[] test OK");
-}
+//	writeln("startTrackingAllocs() and new int[] test OK");
+//}

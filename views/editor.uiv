@@ -23,7 +23,7 @@ Base editor_base
 			{
 				flipSplit = true;
 				split = 200;
-				GameView 
+				GameView game_view
 				{
 					background = RGB(0,0,0);
 				}

@@ -6,8 +6,7 @@ import std.random;
 
 import std.stdio;
 
-vec2[] pDisk(int seed, float size, float r, int k = 30)
-{
+vec2[] pDisk(int seed, float size, float r, int k = 30) {
 
 	float cSize = r / SQRT2;
 	int gridSize = cast(int)ceil(size/cSize);
@@ -18,18 +17,15 @@ vec2[] pDisk(int seed, float size, float r, int k = 30)
 	auto active = ArrayList!int(gridSize*gridSize);
 	auto points = ArrayList!vec2(gridSize*gridSize);
 
-	ivec2 gridLoc(vec2 p)
-	{
+	ivec2 gridLoc(vec2 p) {
 		return cast(ivec2)(p/cSize);
 	}
 
-	int gridID(ivec2 p)
-	{
+	int gridID(ivec2 p) {
 		return p.x*gridSize + p.y;
 	}
 
-	void newPoint(vec2 p)
-	{
+	void newPoint(vec2 p) {
 		int id = points.size;
 		points.insert(p);
 		active.insert(id);
@@ -46,16 +42,14 @@ vec2[] pDisk(int seed, float size, float r, int k = 30)
 
 	newPoint(vec2(fx,fy));
 
-	while(active.size > 0)
-	{
+	while(active.size > 0) {
 		int activeId = rnd.front%active.size;
 		rnd.popFront();
 		int id = active.get(activeId);
 		vec2 curP = points.get(id);
 		bool added = false;
 
-		for(int i = 0; i < k; i++)
-		{
+		for(int i = 0; i < k; i++) {
 			float nr = cast(float)((cast(double)rnd.front)/uint.max)*r + r;
 			rnd.popFront();
 			auto a = cast(float)((cast(double)rnd.front)/uint.max)*2.0f*PI;
@@ -68,8 +62,7 @@ vec2[] pDisk(int seed, float size, float r, int k = 30)
 			if(newpGridLoc.x < 0 || newpGridLoc.y < 0 || newpGridLoc.x >= gridSize || newpGridLoc.y >= gridSize) continue;
 			if(grid[gridID(newpGridLoc)] != -1) continue;
 
-			bool checkGrid(ivec2 gp, vec2 cp)
-			{
+			bool checkGrid(ivec2 gp, vec2 cp) {
 				if(gp.x < 0 || gp.y < 0 || gp.x >= gridSize || gp.y >= gridSize) return false;
 				int gpID = grid[gridID(gp)];
 				if(gpID == -1) return true;
@@ -86,8 +79,7 @@ vec2[] pDisk(int seed, float size, float r, int k = 30)
 			check = check && checkGrid(newpGridLoc + ivec2(-1,-1), newP);
 			check = check && checkGrid(newpGridLoc + ivec2(0,-1), newP);
 			check = check && checkGrid(newpGridLoc + ivec2(1,-1), newP);
-			if(check)
-			{
+			if(check) {
 				newPoint(newP);
 				added = true;
 				break;
@@ -99,35 +91,29 @@ vec2[] pDisk(int seed, float size, float r, int k = 30)
 	return points.dat[0 .. points.size];
 }
 
-private struct ArrayList(T)
-{
+private struct ArrayList(T) {
 	int size = 0;
 	public T[] dat;
 
-	public this(int max)
-	{
+	public this(int max) {
 		dat = new T[max];
 	}
 
-	public void insert(T v)
-	{
+	public void insert(T v) {
 		dat[size] = v;
 		size ++;
 	}
 
-	public T remove(int i)
-	{
+	public T remove(int i) {
 		T r = dat[i];
-		for(int j = i; j < size - 1; j++)
-		{
+		for(int j = i; j < size - 1; j++) {
 			dat[j] = dat[j + 1];
 		}
 		size --;
 		return r;
 	}
 
-	public T get(int i)
-	{
+	public T get(int i) {
 		return dat[i];
 	}
 

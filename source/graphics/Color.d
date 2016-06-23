@@ -6,21 +6,18 @@ import math.matrix;
 
 struct Color
 {
-	this(uint rgba)
-	{
+	this(uint rgba) {
 		RGBA = rgba;
 	}
 
-	this(ubyte red, ubyte green, ubyte blue, ubyte alpha)
-	{
+	this(ubyte red, ubyte green, ubyte blue, ubyte alpha) {
 		R = red;
 		G = green;
 		B = blue;
 		A = alpha;
 	}
 
-	this(ubyte red, ubyte green, ubyte blue)
-	{
+	this(ubyte red, ubyte green, ubyte blue) {
 		this(red,green,blue,255);
 	}
 
@@ -36,10 +33,10 @@ struct Color
 		}
 	}
 
-	public string toString()
-	{
-		import std.conv;
-		return "Color(" ~ R.to!string ~ "," ~ G.to!string  ~ "," ~ B.to!string  ~ "," ~ A.to!string  ~ ")";
+	public string toString() {
+		import std.conv: conv_to = to;
+		alias tos = conv_to!string;
+		return "Color(" ~ tos(R) ~ "," ~ tos(G)  ~ "," ~ tos(B)  ~ "," ~ tos(A)  ~ ")";
 	}
 
 	public alias R = m_Red;
@@ -57,8 +54,7 @@ struct Color
 	public alias RGBA = m_RGBA;
 
 	/// Scalar multiplication op
-	auto opBinary(string op : "*", T2)(T2 rhs) if(isScalarType!T2)
-	{	
+	auto opBinary(string op : "*", T2)(T2 rhs) if(isScalarType!T2) {	
 		T2 dR = R*rhs;
 		T2 dG = G*rhs;
 		T2 dB = B*rhs;
@@ -78,14 +74,12 @@ struct Color
 	} 
 
 	/// Scalar divide op
-	auto opBinary(string op : "/", T2)(T2 rhs) if(isScalarType!T2)
-	{	
+	auto opBinary(string op : "/", T2)(T2 rhs) if(isScalarType!T2) {	
 		return this*(1/rhs);
 	} 
 
 	/// add op
-	auto opBinary(string op : "+")(Color x)
-	{	
+	auto opBinary(string op : "+")(Color x) {	
 		int dR = R+x.R;
 		int dG = G+x.G;
 		int dB = B+x.B;
@@ -103,14 +97,12 @@ struct Color
 		return Color(cast(ubyte)(dR),cast(ubyte)(dG),cast(ubyte)(dB),cast(ubyte)(dA));
 	} 
 
-	void opAssign(uint c)
-	{
+	void opAssign(uint c) {
 		m_RGBA = c;
 	}
 }
 
-public Color alphaBlend(Color fg, Color bg)
-{
+public Color alphaBlend(Color fg, Color bg) {
 	// Todo This is not correct, needs fixing, seems like this keeps happending, I will use something for a while and then suddenly relize it is not correct... 
 	Color rtn;
 	if(fg.A == 255) return fg;
@@ -125,15 +117,12 @@ public Color alphaBlend(Color fg, Color bg)
 	return rtn;
 }
 
-vec4 to(T: vec4)(Color c)
-{
+vec4 to(T: vec4)(Color c) {
 	return vec4(c.R, c.G, c.B, c.A)/255.0f;
 }
 
-Color to(T: Color)(vec4 c)
-{
-	foreach(ref float f; c.m_data)
-	{
+Color to(T: Color)(vec4 c) {
+	foreach(ref float f; c.data) {
 		f *= 255.0f;
 		if(f > 255) f = 255;
 		if(f < 0) f = 0;
@@ -141,18 +130,16 @@ Color to(T: Color)(vec4 c)
 	return Color(cast(ubyte)c.x, cast(ubyte)c.y, cast(ubyte)c.z, cast(ubyte)c.w);
 }
 
-Color to(T: Color)(vec3 c)
-{
-	foreach(ref float f; c.m_data)
-	{
+Color to(T: Color)(vec3 c) {
+	foreach(ref float f; c.m_data) {
+		f *= 255.0f;
 		if(f > 255) f = 255;
 		if(f < 0) f = 0;
 	}
 	return Color(cast(ubyte)c.x, cast(ubyte)c.y, cast(ubyte)c.z, 255);
 }
 
-Color perpInterp(Color A, Color B, Color C, vec3 uvw, vec3 depth)
-{
+Color perpInterp(Color A, Color B, Color C, vec3 uvw, vec3 depth) {
 	vec4 a = A.to!vec4;
 	vec4 b = B.to!vec4;
 	vec4 c = C.to!vec4;
@@ -164,7 +151,18 @@ Color perpInterp(Color A, Color B, Color C, vec3 uvw, vec3 depth)
 	return (tmp / denom).to!Color;
 }
 
-Color RGB(ubyte r, ubyte g, ubyte b)
-{
+Color RGB(ubyte r, ubyte g, ubyte b) {
 	return Color(r,g,b,255);
+}
+
+/**
+* Calculates a "perceived" brightness value
+* Ignores alpha
+* returns a value between 0 and 1
+*/
+float perceivedBrightness(Color c) {
+	import std.math;
+	auto v = c.to!vec4();
+	v *= v; // sqr it
+	return sqrt( 0.299f*v.x + 0.587f*v.y + 0.114f*v.z);
 }

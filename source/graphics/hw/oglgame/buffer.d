@@ -2,12 +2,10 @@
 
 import graphics.hw.enums;
 import graphics.hw.structs;
-import graphics.hw.renderlist;
  
 import graphics.hw.oglgame.state;
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
-import derelict.freetype.ft;
 import derelict.opengl3.gl3;
 
 public struct bufferRef
@@ -15,7 +13,7 @@ public struct bufferRef
 	// ref type
 	package GLuint id = 0;
 	
-	public void subData(bufferSubDataInfo info) @nogc
+	public void subData(hwBufferSubDataInfo info) @nogc
 	{
 		oglgBufferSubData(this, info);
 	}
@@ -24,10 +22,11 @@ public struct bufferRef
 	{
 		assert(id != 0, "Invalid buffer");
 		glInvalidateBufferData(id);
+		oglgCheckError();
 	}
 }
 
-public bufferRef createBuffer(bufferCreateInfo info) @nogc
+public bufferRef createBuffer(hwBufferCreateInfo info) @nogc
 {
 	bufferRef r;
 	GLbitfield flags = 0;
@@ -38,6 +37,7 @@ public bufferRef createBuffer(bufferCreateInfo info) @nogc
 	glBindBuffer(target, r.id);
 	glBindBuffer(target, 0);
 	glNamedBufferStorage(r.id, info.size, info.data.ptr, flags);
+	oglgCheckError();
 	return r;
 }
 
@@ -45,20 +45,21 @@ public void destroyBuffer(ref bufferRef obj) @nogc
 {
 	glDeleteBuffers(1, &obj.id);
 	obj.id = 0;
+	oglgCheckError();
 }
 
-package void oglgBufferSubData(bufferRef obj, bufferSubDataInfo info) @nogc
+package void oglgBufferSubData(bufferRef obj, hwBufferSubDataInfo info) @nogc
 {
 	glNamedBufferSubData(obj.id, info.offset, info.data.length, info.data.ptr);
+	oglgCheckError();
 }
 
-package GLenum oglgVertexUsageToEnum(bufferUsage use) @nogc
+package GLenum oglgVertexUsageToEnum(hwBufferUsage use) @nogc
 {
-	switch(use)
-	{
-		case bufferUsage.vertex:	return GL_ARRAY_BUFFER;
-		case bufferUsage.uniform: 	return GL_UNIFORM_BUFFER;
-		case bufferUsage.index: 	return GL_ELEMENT_ARRAY_BUFFER;
+	switch(use) {
+		case hwBufferUsage.vertex:	return GL_ARRAY_BUFFER;
+		case hwBufferUsage.uniform: 	return GL_UNIFORM_BUFFER;
+		case hwBufferUsage.index: 	return GL_ELEMENT_ARRAY_BUFFER;
 		default: assert(false, "Unsupported vertex usage type");
 	}
 	

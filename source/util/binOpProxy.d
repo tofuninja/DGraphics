@@ -2,12 +2,10 @@
 
 import std.algorithm : joiner, map;
 import std.array : array;
-struct __typeproxy(T, string s)
-{
+struct __typeproxy(T, string s) {
 	enum op = s;
 	T payload;
-	auto opUnary(string newop)()
-	{
+	auto opUnary(string newop)() {
 		return __typeproxy!(T,newop~op)(payload);
 	}
 }
@@ -56,13 +54,11 @@ struct __typeproxy(T, string s)
  */
 enum binOpProxy(proxies ...) = `
     import ` ~ __MODULE__ ~ ` : __typeproxy;
-    auto opBinary(string op, D : __typeproxy!(T, T_op), T, string T_op) (D rhs) 
-    {
+    auto opBinary(string op, D : __typeproxy!(T, T_op), T, string T_op) (D rhs) {
         return opBinary!(op~D.op)(rhs.payload);
     }
 ` ~ [proxies].map!((string a) => `
-    auto opUnary(string op : "` ~ a ~ `")()
-    {
+    auto opUnary(string op : "` ~ a ~ `")() {
         return __typeproxy!(typeof(this),op)(this);
     }
 `).joiner.array;

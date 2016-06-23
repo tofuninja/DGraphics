@@ -1,24 +1,21 @@
 ﻿module graphics.gui.button;
 
-import graphics.hw.game;
+import graphics.hw;
 import graphics.gui.div;
 import graphics.simplegraphics;
 import graphics.color;
 import math.geo.rectangle;
 import math.matrix;
-import util.event;
 
-class Button : div
-{
+
+class Button : div {
+	private enum lowerText = true;
 	private bool btnDown = false;
-
 	public bool border = true;
-	public string alignment = "center";
-	public Event!(div) onPress;
-	protected void pressProc(){}
+	public Alignment alignment = Alignment.center;
+	protected void pressProc() {}
 
-	this()
-	{
+	this() {
 		canClick = true;
 	}
 
@@ -29,32 +26,17 @@ class Button : div
 		auto v3 = renderBounds.loc + vec2(0, rbm1.y);
 		auto v4 = renderBounds.loc + rbm1;
 
-		Color darker;
-		{
-			auto v = background.to!vec4;
-			v = v*0.8f;
-			darker = v.to!Color;
-		}
+		Color darker = style.border_shadow;
+		Color lighter = style.border;
 
-		Color lighter;
-		{
-			auto v = background.to!vec4;
-			v = v*1.1f;
-			lighter = v.to!Color;
-		}
-
-		g.drawRectangle(renderBounds, background);
-		if(border)
-		{
-			if(btnDown)
-			{
+		g.drawRectangle(renderBounds, style.button);
+		if(border) {
+			if(btnDown) {
 				g.drawLine(v1, v2, darker,1);
 				g.drawLine(v1, v3, darker,1);
 				g.drawLine(v3, v4, lighter,1);
 				g.drawLine(v2, v4 + vec2(0, 1), lighter,1);
-			}
-			else
-			{
+			} else {
 				g.drawLine(v1, v2, lighter,1);
 				g.drawLine(v1, v3, lighter,1);
 				g.drawLine(v3, v4, darker,1);
@@ -63,33 +45,33 @@ class Button : div
 		}
 
 		auto tb =  g.getFont.measureString(text);
-		vec2 p = renderBounds.alignIn(tb, alignment);
-		if(btnDown) p = p + vec2(1,1);
-		g.drawString(text, p, textcolor); 
+		auto textRec = Rectangle(renderBounds.loc + vec2(2,3), renderBounds.size - vec2(4,4));
+		vec2 p = textRec.alignIn(tb, alignment);
+		static if(lowerText) if(btnDown) p = p - vec2(1,1);
+		g.drawString(text, p, style.text); 
 	}
 
-	override protected void clickProc(vec2 loc, mouseButton btn, bool down)
-	{
-		if(down && btn == mouseButton.MOUSE_LEFT)
-		{
+	override protected void clickProc(vec2 loc, hwMouseButton btn, bool down) {
+		bool left = btn == hwMouseButton.MOUSE_LEFT || btn == hwMouseButton.MOUSE_DOUBLE;
+		if(down && left) {
 			btnDown = true;
 			invalidate();
 		}
-
-		if(!down && btn == mouseButton.MOUSE_LEFT && btnDown)
-		{
+		
+		if(!down && left) {
 			pressProc();
-			onPress(this);
+			{
+				EventArgs e = {type: EventType.Action};
+				doEvent(e);
+			}
 			btnDown = false;
 			invalidate();
 		}
 	}
 
 
-	override protected void enterProc(bool enter)
-	{
-		if(!enter && btnDown)
-		{
+	override protected void enterProc(bool enter) {
+		if(!enter && btnDown) {
 			btnDown = false;
 			invalidate();
 		}

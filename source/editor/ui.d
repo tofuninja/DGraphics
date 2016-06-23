@@ -3,61 +3,64 @@ module editor.ui;
 import editor.io;
 import editor.concmds;
 import math.matrix;
-import math.geo.rectangle;
-import graphics.hw;
-import graphics.color;
-import graphics.mesh;
 import graphics.gui;
 import util.memory.gcTracker;
+import tofuEngine;
 
-mixin loadUIView!"editor.uiv";
+Engine editor_engine;
+EngineProperties editor_props;
+EditorView editor_view;
 
-
-typeof(startUI!editor_base()) editor_ui;
-
-public void startEditor()
-{
-
-	editor_ui = startUI!editor_base();
-	editor_ui.get!"console".consoleCommandGenerator!(editor.concmds)();
-	
-	{
-		auto tree = editor_ui.get!"fileBox";
-		tree.setFolder("./assets/");
-	}
-	
-	Game.printLibVersions!writeln();
-	writeln("\nType \"help\" for a list of commands");
-	
-	{
-		struct test{
-			int foo;
-			float bar;
-			char[] arr;
-		}
-
-		test t;
-		t.foo = 12;
-		t.bar = 3.1415926f;
-		t.arr = ['a','b'];
-
-		import util.serial;
-		auto arr = Serialize(t);
-		writeln(arr);
-		writeln(arr.length);
-		test t2;
-		Deserialize(t2, arr);
-		writeln(t2);
-	}
-
-	editor_ui.run();
-}
-
-template testTemp()
-{
-	class testTemp : div
-	{
-
-	}
+public void startEditor() {
+	//auto eng = new Engine(1000, 800, "Editor");
+	//eng.ui.fillFirst = true;
+	////eng.ui.style = Themes.Gray;
+	//editor_engine = eng;
+	//
+	//auto vs = new VerticalSplit();
+	//vs.flipSplit = true;
+	//vs.percentageSplit = true;
+	//vs.split = 0.25f;
+	//vs.border = false;
+	//vs.back = false;
+	//eng.ui.addDiv(vs);
+	//
+	//auto hs = new HorizontalSplit();
+	//hs.flipSplit = true;
+	//hs.split = 200;
+	//hs.back = false;
+	//hs.border = false;
+	//vs.addDiv(hs);
+	//
+	//auto con = new Console();
+	//consoleCommandGenerator!(editor.concmds)(con);
+	//con.border = false;
+	//vs.addDiv(con);
+	//editor_con = con;
+	//
+	//editor_view = new EditorView();
+	//hs.addDiv(editor_view);
+	//
+	//auto ep = new EngineProperties();
+	//hs.addDiv(ep);
+	//editor_props = ep;
+	//
+	//{
+	//    import graphics.hw:hwGetVersionString;
+	//    import graphics.image:getImageLoaderVersionString;
+	//    import graphics.font:getFontLoaderVersionString;
+	//    import graphics.mesh:getMeshLoaderVersionString;
+	//    import tofuEngine.components.physics_components:getPhysicsEngineVersionString;
+	//    write(hwGetVersionString());
+	//    write(getImageLoaderVersionString());
+	//    write(getFontLoaderVersionString());
+	//    write(getMeshLoaderVersionString());
+	//    write(getPhysicsEngineVersionString());
+	//}
+	//writeln("\nType \"help\" for a list of commands");
+	//writeln("WASD to move camera");
+	//writeln("Click+Mouse to rotate camera");
+	//
+	//eng.run();
 }
 

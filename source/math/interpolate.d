@@ -1,12 +1,10 @@
 ﻿module math.interpolate;
 
-auto lerp(T)(T v0, T v1, T t)
-{
+auto lerp(T)(T v0, T v1, T t) {
 	return (1-t)*v0 + t*v1;
 }
 
-auto cosInterp(T)(T y1, T y2, T mu)
-{
+auto cosInterp(T)(T y1, T y2, T mu) {
 	import std.math;
 	auto mu2 = (1-cos(mu*PI))/2.0;
 	return cast(T)(y1*(1-mu2)+y2*mu2);
@@ -21,14 +19,12 @@ struct interpolate2d
 
 	int s;
 	float[] d;
-	public this(int size, float[] data)
-	{
+	public this(int size, float[] data) {
 		s = size;
 		d = data;
 	}
 
-	public ivec2 getIndex(float x, float y)
-	{
+	public ivec2 getIndex(float x, float y) {
 		float fx = x*(s-1);
 		float fy = y*(s-1);
 		int ix = cast(int)floor(fx);
@@ -36,8 +32,7 @@ struct interpolate2d
 		return ivec2(ix, iy);
 	}
 
-	public float get(float x, float y)
-	{
+	public float get(float x, float y) {
 		import std.math;
 		import std.algorithm;
 		
@@ -50,8 +45,7 @@ struct interpolate2d
 		dx = fx - ix;
 		dy = fy - iy;
 		
-		float rxy(float x, float y)
-		{
+		float rxy(float x, float y) {
 			int xi = min(max(cast(int)x,0),s-1);
 			int yi = min(max(cast(int)y,0),s-1);
 			int id = (xi)*s + (yi);
@@ -70,8 +64,7 @@ struct interpolate2d
 		return v;
 	}
 
-	public vec2 getFlow(float x, float y)
-	{
+	public vec2 getFlow(float x, float y) {
 		import std.math;
 		import std.algorithm;
 		
@@ -84,8 +77,7 @@ struct interpolate2d
 		dx = fx - ix;
 		dy = fy - iy;
 		
-		float rxy(float x, float y)
-		{
+		float rxy(float x, float y) {
 			int xi = min(max(cast(int)x,0),s-1);
 			int yi = min(max(cast(int)y,0),s-1);
 			int id = (xi)*s + (yi);
@@ -109,20 +101,16 @@ struct interpolate2d
 		return vec2(ddx,ddy);
 	}
 
-	public float[] flatten(int size)
-	{
+	public float[] flatten(int size) {
 		float[] dat = new float[size*size];
-		void setDat(int x, int y, float v)
-		{
+		void setDat(int x, int y, float v) {
 			dat[x*size + y] = v;
 		}
 		
 		float fs = cast(float)size;
 		
-		for(int i = 0; i < size; i++)
-		{
-			for(int j = 0; j < size; j++)
-			{
+		for(int i = 0; i < size; i++) {
+			for(int j = 0; j < size; j++) {
 				float v = get(i/fs, j/fs);
 				setDat(i, j, v);
 			}
@@ -130,24 +118,20 @@ struct interpolate2d
 		return dat; 
 	}
 
-	private float G(float x)
-	{
+	private float G(float x) {
 		return (1 - cast(float)cos(PI * x)) * 0.5f;
 	}
 	
-	private float dG(float x)
-	{
+	private float dG(float x) {
 		return cast(float)(sin(PI * x) * 0.5);
 	}
 	
-	private float F(float x, float a, float b)
-	{
+	private float F(float x, float a, float b) {
 		float g = G(x);
 		return a - a * g + b * g;
 	}
 	
-	private float dF(float x, float a, float b)
-	{
+	private float dF(float x, float a, float b) {
 		return dG(x) * (b - a);
 	}
 }

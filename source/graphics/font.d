@@ -3,105 +3,155 @@
 import derelict.freetype.ft;
 import math.matrix;
 import math.geo.rectangle;
-import graphics.hw.game;
+import graphics.hw;
+
+// TODO ability to mix fonts in 1 font object(use the extra fonts as back ups for glyphs the main font does not have)
+
+
+version(Windows) {
+	private enum ft_dll 	= "freetype.dll";
+} else version(linux) {
+	static assert(false); // TODO Not testsed
+	private enum ft_dll 	= "libfreetype.so";
+} else {
+	static assert(false);
+}
+
+version(X86_64) {
+	private enum lib_folder = "./libs/libs64/";
+} else {
+	private enum lib_folder = "./libs/";
+}
+
+private FT_Library ftlibrary;
+private bool lib_loaded = false;
+
+private void initFreetype() {
+	DerelictFT.load([lib_folder ~ ft_dll]);
+	auto error = FT_Init_FreeType(&ftlibrary);
+	if ( error ) {
+		import std.conv:to;
+		throw new Exception("Freetype faild to init: " ~ error.to!string);
+	}
+}
+
+string getFontLoaderVersionString() {
+	import std.conv:to;
+	int maj, min, pat;
+	if(lib_loaded == false) initFreetype();
+	FT_Library_Version(ftlibrary, &maj, &min, &pat);
+	return "FreeType Version: " ~ maj.to!string ~ "." ~ min.to!string ~ "." ~ pat.to!string;
+}
 
 class Font
 {
-	static FT_Library ftlibrary;
-
 	public Glyph[dchar] glyphs;
-	public texture2DRef texture; 
+	public hwTextureRef!(hwTextureType.tex2D) texture; 
 	public int lineHeight = 0;
 	public int ascent = 0;
 	public int descent = 0;
 
-	public this(string file, float size)
-	{
-		loadFont(file, size);
+	public this(float size, string[] files...) {
+		if(lib_loaded == false) initFreetype();
+		loadFont(files, size);
 	}
 
-	public ~this()
-	{
-		Game.destroyTexture(texture);
+	public ~this() {
+		hwDestroy(texture);
 	}
 
-	private void loadFont(string file, float size)
-	{
+	private void loadFont(string[] all_files, float size) {
 		import std.string;
 		import std.stdio;
 		import std.conv;
-		FT_Face face;
-		auto error = FT_New_Face(ftlibrary, file.toStringz(), 0, &face);
+		import math.geo.binpacker2d;
+		import std.algorithm;
+		import std.experimental.allocator;
+		import std.experimental.allocator.mallocator;
+		alias alloc = Mallocator.instance;
 
-		if(error == FT_Err_Unknown_File_Format) throw new Exception("Invalid file format, it is not a font");
-		else if(error) 							throw new Exception("Unable to load font file: " ~ error.to!string);
+		FT_Face[] all_faces = alloc.makeArray!FT_Face(all_files.length);
+		scope(exit) alloc.dispose(all_faces);
 
-		error = FT_Set_Char_Size(
-			face,    				/* handle to face object           */
-			0,      			 	/* char_width in 1/64th of points  */
-			cast(int)(size*64),   	/* char_height in 1/64th of points */
-			72,     				/* horizontal device resolution    */
-			72 );   				/* vertical device resolution      */
+		foreach(font_index,file; all_files) {
+			FT_Face face;
+			auto error = FT_New_Face(ftlibrary, file.toStringz(), 0, &face);
+			all_faces[font_index] = face;
+			
+			if(error == FT_Err_Unknown_File_Format) throw new Exception("Invalid file format, it is not a font");
+			else if(error) 							throw new Exception("Unable to load font file: " ~ error.to!string);
 
-		if(error) throw new Exception("Font size not valid: " ~ error.to!string);
+			error = FT_Set_Char_Size(
+				face,    				/* handle to face object           */
+				0,      			 	/* char_width in 1/64th of points  */
+				cast(int)(size*64),   	/* char_height in 1/64th of points */
+				72,     				/* horizontal device resolution    */
+				72 );   				/* vertical device resolution      */
 
-		lineHeight = cast(int)fontCordsToPixelY(face, face.height);
-		ascent = cast(int)fontCordsToPixelY(face, face.ascender);
-		descent = cast(int)fontCordsToPixelY(face, face.descender);
+			if(error) throw new Exception("Font size not valid: " ~ error.to!string);
+			
+			if(font_index == 0) {
+				//auto bb_min = vec2(fontCordsToPixelX(face, cast(short)face.bbox.xMin), fontCordsToPixelY(face, cast(short)face.bbox.yMin));
+				//auto bb_max = vec2(fontCordsToPixelX(face, cast(short)face.bbox.xMax), fontCordsToPixelY(face, cast(short)face.bbox.yMax));
+				//auto bb_dif = bb_max - bb_min;
+				//auto ma = fontCordsToPixelX(face, face.max_advance_width);
+				lineHeight = cast(int)fontCordsToPixelY(face, face.height);
+				ascent = cast(int)fontCordsToPixelY(face, face.ascender);
+				descent = cast(int)fontCordsToPixelY(face, face.descender);
+			}
 
-		// Load all the glyphs and put them into the glyphs array
-		foreach(g; allGlyphs(face))
-		{
+			// Load all the glyphs and put them into the glyphs array
+			foreach(g; allGlyphs(face)) {
 
-			auto slot = face.glyph;
-			error = FT_Load_Glyph(face,  g.id, FT_LOAD_DEFAULT);
-			if ( error ) continue;
-			FT_Glyph  glyph; error = FT_Get_Glyph(slot, &glyph);
-			if ( error ) continue;
+				// Skip glyphs we already have
+				if(g.c in glyphs) continue;
 
-			FT_BBox  bbox;
-			FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
-			auto width  = bbox.xMax - bbox.xMin;
-			auto height = bbox.yMax - bbox.yMin;
+				auto slot = face.glyph;
+				error = FT_Load_Glyph(face,  g.id, FT_LOAD_DEFAULT);
+				if ( error ) continue;
+				FT_Glyph  glyph; 
+				error = FT_Get_Glyph(slot, &glyph);
+				if ( error ) continue;
 
+				FT_BBox  bbox;
+				FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
+				auto width  = bbox.xMax - bbox.xMin;
+				auto height = bbox.yMax - bbox.yMin;
 
+				import std.math;
+				Glyph myglyph;
+				myglyph.glyphChar = g.c;
+				myglyph.id = g.id;
+				myglyph.font_id = cast(uint)font_index;
+				myglyph.extent.size = ivec2(width + 2, height + 2);
+				myglyph.advance = ivec2(slot.advance.x >> 6, slot.advance.y >> 6);
+				glyphs[g.c] = myglyph;
 
-			import std.math;
-			Glyph myglyph;
-			myglyph.glyphChar = g.c;
-			myglyph.id = g.id;
-			myglyph.extent.size = ivec2(width + 2, height + 2);
-			myglyph.advance = ivec2(slot.advance.x >> 6, slot.advance.y >> 6);
-			glyphs[g.c] = myglyph;
+				FT_Done_Glyph(glyph);
+			}
 
-			FT_Done_Glyph(glyph);
 		}
 
 		// Render all the glyphs to a texture
 		{
-			import math.geo.binpacker2d;
-			import std.algorithm;
-			import util.memory.malloc;
 			auto r = map!((ref a) => &(a.extent))(glyphs.byValue);
 			auto l = glyphs.length;
 			auto binSize = binPack2D(r, l);
 			uint s = nextPowerOf2(max(binSize.x,binSize.y));
-			auto dest = mallocTA!ubyte(s*s);
+			auto dest = alloc.makeArray!ubyte(s*s);
 
-			foreach(ref g; glyphs.byValue)
-			{
+			foreach(ref g; glyphs.byValue) {
+				auto face = all_faces[g.font_id];
 				auto slot = face.glyph;
-				error = FT_Load_Glyph(face, g.id, FT_LOAD_RENDER);
+				auto error = FT_Load_Glyph(face, g.id, FT_LOAD_RENDER);
 				if ( error ) continue;
 
 				auto penx = g.extent.loc.x;
 				auto peny = g.extent.loc.y;
 				
 				auto p = slot.bitmap.buffer;
-				for(int i = 0; i < slot.bitmap.rows; i++)
-				{
-					for(int j = 0; j < slot.bitmap.width; j++)
-					{
+				for(int i = 0; i < slot.bitmap.rows; i++) {
+					for(int j = 0; j < slot.bitmap.width; j++) {
 						dest[(penx + j) + (peny + i)*s] = p[j];
 					}
 					p += slot.bitmap.pitch;
@@ -113,15 +163,15 @@ class Font
 
 			// Create a texture and fill it with the data
 			{
-				textureCreateInfo2D info;
-				info.format = colorFormat.R_u8;
+				hwTextureCreateInfo!(hwTextureType.tex2D) info;
+				info.format = hwColorFormat.R_n8;
 				info.size = uvec3(s, s, 0);
-				texture = Game.createTexture(info);
+				texture = hwCreate(info);
 				
-				textureSubDataInfo sub;
+				hwTextureSubDataInfo sub;
 				sub.size = uvec3(s, s, 0);
 				sub.data = dest;
-				sub.format = colorFormat.R_u8;
+				sub.format = hwColorFormat.R_n8;
 				texture.subData(sub);
 			}
 
@@ -131,14 +181,12 @@ class Font
 				import graphics.color;
 				import graphics.image;
 				Image img = new Image(s, s);
-				for(int i = 0; i < s; i++)
-				{
-					for(int j = 0; j < s; j++)
-					{
+				for(int i = 0; i < s; i++) {
+					for(int j = 0; j < s; j++) {
 						img[i,j] = Color(0, 0, 0, dest[i + j*s]);
 					}
 				}
-				img.saveImage(file ~ "_fonttexture.png");
+				img.saveImage(all_files[0] ~ "_fonttexture.png");
 			}
 			*/
 
@@ -147,33 +195,36 @@ class Font
 			{
 				import std.file;
 				auto f = File(file ~ "_fonttext.txt", "w");
-				foreach(g; glyphs)
-				{
+				foreach(g; glyphs) {
 					f.writeln(g);
 				}
 			}*/
 
-			freeT(dest);
+			alloc.dispose(dest);
 		}
 
-		FT_Done_Face(face);
+		foreach(face; all_faces)
+			if(face != null) FT_Done_Face(face);
 	}
 
-	public fRectangle measureString(dstring text)
-	{
-		fRectangle r = fRectangle(0,0,0,0);
+	public fRectangle measureString(dstring text) {
+		fRectangle r = fRectangle(0,-ascent,1,lineHeight);
 		auto range = textLayout(text, vec2(0,0));
 		if(range.empty) return r;
-		r.loc = range.front.loc + range.front.glyph.offset;
-		r.size = cast(vec2)range.front.glyph.extent.size;
-		range.popFront();
-		foreach(g; range)
-		{
-			if(g.glyph == null) continue;
-			fRectangle n; 
-			n.loc = g.loc + g.glyph.offset;
-			n.size = cast(vec2)g.glyph.extent.size;
-			expandToFit(r, n);
+
+		//range.popFront();
+		foreach(g; range) {
+			if(g.glyph == null) {
+				fRectangle n;
+				n.loc = g.loc;
+				n.size = vec2(1,lineHeight);
+				expandToFit(r, n);
+			} else {
+				fRectangle n; 
+				n.loc = g.loc + cast(vec2)g.glyph.offset;
+				n.size = cast(vec2)g.glyph.extent.size;
+				expandToFit(r, n);
+			}
 		}
 		
 		return r;
@@ -188,9 +239,8 @@ class Font
 	 *      - the layout range possibly will not contain all the chars in the input(most likly wont)
 	 *      - the layout range possibly will contain chars that were not in the input, what ever it dertermins to be the correct way to layout the text
 	 */
-	public auto textLayout(dstring text, vec2 pen)
-	{
-		import std.range.primitives;
+	public auto textLayout(dstring text, vec2 pen) {
+		import std.range;
 		struct Result{
 			private dstring data;
 			private Font font;
@@ -202,8 +252,7 @@ class Font
 
 			public bool empty = false;;
 			public LayoutPos front;
-			public void popFront() 	
-			{ 
+			public void popFront() { 
 				if(loc >= data.length) {
 					empty = true;
 					return;
@@ -226,8 +275,7 @@ class Font
 					pen_loc = line_start + vec2(0, font.lineHeight*line_count);
 					return;
 				}
-				if(dc == '\t')
-				{
+				if(dc == '\t') {
 					import std.math;
 					front.glyph = null;
 					front.c = dc;
@@ -261,11 +309,9 @@ class Font
 
 		// Get the size of a tab
 		auto g = ' ' in glyphs;
-		if(g != null)
-		{
+		if(g != null) {
 			r.tab_width = g.advance.x * 5; // Width of 5 spaces
-		}
-		else r.tab_width = 0; // No space? No tabs :/ 
+		} else r.tab_width = 0; // No space? No tabs :/ 
 
 		r.popFront();
 		return r;
@@ -276,6 +322,7 @@ class Font
 struct Glyph
 {
 	private uint id;
+	private uint font_id;
 
 	ivec2 advance;
 	ivec2 offset;
@@ -297,22 +344,19 @@ private struct glyphID
 	uint id;
 }
 
-private auto allGlyphs(FT_Face face)
-{
+private auto allGlyphs(FT_Face face) {
 	import std.range;
 	struct result
 	{
 		private FT_Face f;
 		glyphID front;
 		bool empty;
-		this(FT_Face F)
-		{
+		this(FT_Face F) {
 			f = F;
 			front.c = FT_Get_First_Char(f, &(front.id));
 			empty = (front.id == 0);
 		}
-		void popFront()
-		{
+		void popFront() {
 			front.c = FT_Get_Next_Char(f, front.c, &(front.id));
 			empty = (front.id == 0);
 		}
@@ -321,8 +365,7 @@ private auto allGlyphs(FT_Face face)
 	return result(face);
 }
 
-private uint nextPowerOf2(uint v)
-{
+private uint nextPowerOf2(uint v) {
 	v--;
 	v |= v >> 1;
 	v |= v >> 2;
@@ -333,8 +376,7 @@ private uint nextPowerOf2(uint v)
 	return v;
 }
 
-private double fontCordsToPixelX(FT_Face face, short cord)
-{
+private double fontCordsToPixelX(FT_Face face, short cord) {
 	FT_Size_Metrics*  metrics = &face.size.metrics; /* shortcut */
 	double em_size, scale;
 	em_size = 1.0 * face.units_per_EM;
@@ -342,8 +384,7 @@ private double fontCordsToPixelX(FT_Face face, short cord)
 	return cord*scale;
 }
 
-private double fontCordsToPixelY(FT_Face face, short cord)
-{
+private double fontCordsToPixelY(FT_Face face, short cord) {
 	FT_Size_Metrics*  metrics = &face.size.metrics; /* shortcut */
 	double em_size, scale;
 	em_size = 1.0 * face.units_per_EM;

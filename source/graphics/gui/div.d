@@ -1,13 +1,17 @@
 ﻿module graphics.gui.div;
 
-import util.event;
-import graphics.gui.parser.ast.astNode;
-import graphics.hw.game;
+//import util.event;
+//import graphics.gui.parser.ast.astNode;
+import graphics.hw;
 import graphics.simplegraphics;
 import graphics.color;
+import graphics.gui.base;
 import math.matrix;
 import math.geo.rectangle;
 import container.clist;
+import std.range : retro;
+
+import std.stdio;
 
 //	 _____  _       
 //	|  __ \(_)      
@@ -22,96 +26,195 @@ import container.clist;
 // TODO make shadows more noticeable
 // TODO maybe have a value for shadow intensity?  
 
-// TODO redo the stylize system to just be list of function pointers, will be much more simple and solve alot of problems... 
+// TODO remove as much allocations as possible, try to use mallocator as much as possible
+// TODO switch strings over to rstring
+
+/// Color scheme for the ui, initied to a high contrast theme
+struct Style {
+	Color background 		= RGB(255,255,255);
+	Color foreground 		= RGB(0,0,0);
+	Color contrast			= RGB(255,255,255);
+	Color button			= RGB(255,255,255);
+	Color lower				= RGB(240,240,240);
+	Color disabled			= RGB(200,200,200);
+	Color highlight			= RGB(180,180,180);
+	Color highlight_contrast= RGB(210,210,210);
+
+	Color text 				= RGB(0,0,0);
+	Color text_hint 		= RGB(100,100,100);
+	Color text_contrast 	= RGB(0,0,0);
+	Color text_hover 		= RGB(0,120,155);
+
+	Color border			= RGB(100,100,100);
+	Color border_shadow		= RGB(0,0,0);
+	Color border_contrast	= RGB(0,0,0);
+
+	Color scroll				= RGB(200,200,200);
+	Color border_scroll			= RGB(100,100,100);
+	Color border_scroll_shadow	= RGB(0,0,0);
+
+	Color split					= RGB(255,255,255);
+	Color border_split			= RGB(100,100,100);
+	Color border_split_shadow	= RGB(0,0,0);
+}
+
+struct EventArgs
+{
+	EventType 	type 		= EventType.Other;
+	div 		origin		= null;
+	vec2 		loc 		= vec2(0,0);
+	bool 		down		= false;
+	hwMouseButton mouse;
+	hwKey 		key_value;
+	hwKeyModifier mods;
+	dchar		cvalue	 	= '\0';
+	dstring 	svalue		= "";
+	int			ivalue		= 0;
+	float 		fvalue		= 0.0f;
+}
+
+enum EventType
+{
+	Init,
+	Think,
+	Stylize,
+	Click,
+	Key,
+	Char,
+	Enter,
+	Hover,
+	Focus,
+	Scroll,
+	Action,
+	ValueChange,
+	Menu,
+
+	Other
+}
 
 class div
 {
-	protected div divparent;
+	protected bool initialized = false;
+	package div parent;
+	package Base base;
+	package CList!(div).Node* myNode;
+	Rectangle bounds;
+	dstring text = "";
+	bool canFocus = false;
+	bool canClick = false;
+	bool canScroll = false;
+	bool hasFocus = false;
+	protected CList!div childrenList;
 
-	// set of generic properties that all divs will have
-	public Rectangle bounds;
-	public dstring text = "";
-	public Color background = RGB(255,255,255);
-	public Color foreground = RGB(0,0,0);
-	public Color textcolor = RGB(0,0,0);
-	public bool canFocus = false;
-	public bool canClick = false;
-	public bool canScroll = false;
-	public bool hasFocus = false;
+	hwCursorRef cursor;
+	Style style;
+	void delegate(EventArgs event) eventHandeler; 
 
-	public cursorRef cursor;
-	public CList!div childrenList;
-
-	public Event!(div) onInit;
-	public Event!(div) onThink;
-	public Event!(div,simplegraphics,Rectangle) onDraw;
-	public Event!(div) onStylize;
-	public Event!(div,vec2,mouseButton,bool) onClick;
-	public Event!(div,key,keyModifier,bool) onKey;
-	public Event!(div,bool) onEnter;
-	public Event!(div,vec2) onHover;  
-	public Event!(div,bool) onFocus;
-	public Event!(div,dchar) onChar;
-	public Event!(div,vec2,int) onScroll;
-
-	protected void initProc(){} 
-	protected void thinkProc(){}
-	protected void stylizeProc(){}
-	protected void afterStylizeProc(){}
+	protected void initProc() {} 
+	protected void thinkProc() {}
+	protected void stylizeProc() {}
 	protected void drawProc(simplegraphics g, Rectangle renderBounds) {}
 	protected void afterDrawProc(simplegraphics g, Rectangle renderBounds) {}
-	protected void keyProc(key k, keyModifier mods, bool down){}
+	protected void keyProc(hwKey k, hwKeyModifier mods, bool down) {}
 	protected void charProc(dchar c) {} 
-	protected void clickProc(vec2 loc, mouseButton button, bool down){}
-	protected void enterProc(bool enter){}
-	protected void hoverProc(vec2 pos){}
-	protected void focusProc(bool hasFocus){}
-	protected void scrollProc(vec2 loc, int scroll){}
-	public void invalidate(){ divparent.invalidate(); }
+	protected void clickProc(vec2 loc, hwMouseButton button, bool down) {}
+	protected void enterProc(bool enter) {}
+	protected void hoverProc(vec2 pos) {}
+	protected void focusProc(bool hasFocus) {}
+	protected void scrollProc(vec2 loc, int scroll) {}
+	protected void menuProc(int index, dstring text) {}
+	void invalidate() { if(base) base.invalidate(); }
 
-	enum styleMember[] style = []; 
-	mixin(getLocal_mixin);
-
-	public this()
-	{
-		cursor = Game.SimpleCursors.arrow;
+	final void doEvent(EventArgs event) {
+		if(eventHandeler !is null) {
+			event.origin = this;
+			eventHandeler(event);
+		}
 	}
 
-	public void doThink()
-	{
+	final void doEventInit() {
+		EventArgs e = { type:EventType.Init };
+		doEvent(e);
+	}
+
+	final void doEventThink() {
+		EventArgs e = { type:EventType.Think };
+		doEvent(e);
+	}
+
+	final void doEventStylize() {
+		EventArgs e = { type:EventType.Stylize };
+		doEvent(e);
+	}
+
+	final void doEventClick(vec2 loc, hwMouseButton btn, bool down) {
+		EventArgs e = { type:EventType.Click, loc:loc, down:down, mouse:btn};
+		doEvent(e);
+	}
+
+	final void doEventKey(hwKey k, hwKeyModifier mod, bool down) {
+		EventArgs e = { type:EventType.Key, key_value:k, mods:mod, down:down };
+		doEvent(e);
+	}
+
+	final void doEventChar(dchar c) {
+		EventArgs e = { type:EventType.Char, cvalue:c };
+		doEvent(e);
+	}
+
+	final void doEventEnter(bool down) {
+		EventArgs e = { type:EventType.Enter, down:down };
+		doEvent(e);
+	}
+
+	final void doEventHover(vec2 loc) {
+		EventArgs e = { type:EventType.Hover, loc:loc };
+		doEvent(e);
+	}
+
+	final void doEventFocus(bool down) {
+		EventArgs e = { type:EventType.Focus, down:down };
+		doEvent(e);
+	}
+
+	final void doEventScroll(vec2 loc, int value) {
+		EventArgs e = { type:EventType.Scroll, loc:loc, ivalue:value };
+		doEvent(e);
+	}
+
+	final void doEventMenu(int index, dstring text) {
+		EventArgs e = { type:EventType.Menu, ivalue:index, svalue:text };
+		doEvent(e);
+	}
+
+	this() {
+		cursor = hwGetSimpleCursor(hwSimpleCursor.arrow);
+	}
+
+	package final void doInit() {
+		initProc();
+		doEventInit();
+	}
+
+	void doThink() {
 		thinkProc();
-		onThink(this);
-		foreach(div d; children())
-		{
+		doEventThink();
+		foreach(div d; childrenList[]) {
 			d.doThink();
 		}
 	}
 
-	public void doStylize()
-	{
+	void doStylize() {
 		stylizeProc();
-		onStylize(this);
+		doEventStylize();
 		
-		foreach(div d; children())
-		{
+		foreach(div d; childrenList[]) {
 			d.doStylize();
 		}
 	}
 
-	public void doAfterStylize()
-	{
-		afterStylizeProc();
-		
-		foreach(div d; children())
-		{
-			d.doAfterStylize();
-		}
-	}
-
-	public void doDraw(simplegraphics g, Rectangle renderBounds)
-	{
-		vec2 roundVec2(vec2 v)
-		{
+	void doDraw(simplegraphics g, Rectangle renderBounds) {
+		vec2 roundVec2(vec2 v) {
 			import std.math;
 			return vec2(round(v.x), round(v.y));
 		}
@@ -124,12 +227,10 @@ class div
 		g.setScissor(t);
 
 		t = g.addScissor(renderBounds);
-		onDraw(this, g, renderBounds);
 		g.setScissor(t);
 
 
-		foreach(div d; children())
-		{
+		foreach(div d; childrenList[].retro) {
 			t = g.addScissor(renderBounds);
 			d.doDraw(g, Rectangle(renderBounds.loc + d.bounds.loc, d.bounds.size));
 			g.setScissor(t);
@@ -140,492 +241,146 @@ class div
 		g.setScissor(t);
 	}
 
-	public void doKey(key k, keyModifier mods, bool down)
-	{
+	void doKey(hwKey k, hwKeyModifier mods, bool down) {
 		keyProc(k, mods, down);
-		onKey(this, k, mods, down);
+		doEventKey(k, mods, down);
 	}
 
-	public void doChar(dchar c)
-	{
+	void doChar(dchar c) {
 		charProc(c);
-		onChar(this, c);
+		doEventChar(c);
 	}
 	
-	public div doClick(vec2 loc, mouseButton button, bool down)
-	{
-		div last = null;
-		auto newp = loc-bounds.loc;
-		foreach(c; children)
-		{
-			if(c.bounds.contains(newp)) last = c;
+	div doClick(vec2 loc, hwMouseButton button, bool down) {
+		div last = getChildAt(loc);
+		if(last !is null) last = last.doClick(loc-last.bounds.loc, button, down);
+
+		if(canClick && last is null) {
+			clickProc(loc, button, down);
+			doEventClick(loc, button, down);
+			return this;
 		}
-
-		if(last !is null) last = last.doClick(newp, button, down);
-
-		if(last is null)
-		{
-			if(canClick)
-			{
-				clickProc(newp, button, down);
-				onClick(this, newp, button, down);
-				return this;
-			}
-			else return null;
-		}
-
 		return last;
 	}
 
-	public div doScroll(vec2 loc, int scroll)
-	{
-		div last = null;
-		auto newp = loc-bounds.loc;
-		foreach(c; children)
-		{
-			if(c.bounds.contains(newp)) last = c;
-		}
+	div doScroll(vec2 loc, int scroll) {
+		div last = getChildAt(loc);
+		if(last !is null) last = last.doScroll(loc-last.bounds.loc, scroll);
 		
-		if(last !is null) last = last.doScroll(newp, scroll);
-		
-		if(last is null)
-		{
-			if(canScroll)
-			{
-				scrollProc(newp, scroll);
-				onScroll(this, newp, scroll);
-				return this;
-			}
-			else return null;
-		}
-		
-		return last;
-	}
-
-	public div doHover(vec2 loc)
-	{
-		div last = null;
-		auto newp = loc-bounds.loc;
-		foreach(c; children)
-		{
-			if(c.bounds.contains(newp)) last = c;
-		}
-
-		if(last is null)
-		{
-			hoverProc(newp);
-			onHover(this, newp);
+		if(canScroll && last is null) {
+			scrollProc(loc, scroll);
+			doEventScroll(loc, scroll);
 			return this;
 		}
 		
-		return last.doHover(newp);
+		return last;
 	}
 
-	public void doEnter(bool enter)
-	{
-		if(enter) Game.cmd(cursor);
+	div doHover(vec2 loc) {
+		div last = getChildAt(loc);
+		if(last is null) {
+			hoverProc(loc);
+			doEventHover(loc);
+			return this;
+		}
+		return last.doHover(loc-last.bounds.loc);
+	}
+
+	void doEnter(bool enter) {
+		if(enter) hwCmd(cursor);
 		enterProc(enter);
-		onEnter(this, enter);
+		doEventEnter(enter);
 	}
 
-	public void doFocus(bool hasFocus)
-	{
+	void doFocus(bool hasFocus) {
 		this.hasFocus = hasFocus;
 		focusProc(hasFocus);
-		onFocus(this, hasFocus);
+		doEventFocus(hasFocus);
 	}
 
-	// A linked list to keep track of children
+	void doMenu(int index, dstring text) {
+		menuProc(index, text);
+		doEventMenu(index, text);
+	}
 
-	//protected div next = null;
-	//protected div childrenHead = null;
-
+	void openContextMenu(dstring[] items) {
+		base.openMenu(&(this.doMenu), hwState().mousePos, items);
+	}
 	
+	void addDiv(div d) {
+		assert(d.parent is null, "Child of another div");
+		d.myNode	= childrenList.insertFront(d);
+		d.parent	= this;
+		d.setStyle(this.style);
 
-	public final void addDiv(div d)
-	{
-		//assert(d.next is null, "Child of another div");
-		assert(d.divparent is null, "Child of another div");
-		//d.next = childrenHead;
-		//childrenHead = d;
-		childrenList.insertFront(d);
-		d.divparent = this;
-		d.initProc();
-		d.onInit(d);
-		d.invalidate();
-	}
-
-	public final auto children()
-	{
-		//import std.range;
-		//struct result
-		//{
-		//	public div front;
-		//	public void popFront()	{front = front.next;}
-		//	public bool empty()		{return front is null;}
-		//}
-		//static assert(isInputRange!result);
-		//return result(childrenHead);
-		return childrenList.Range;
-	}
-
-	public simplegraphics getGraphics()
-	{
-		return divparent.getGraphics();
-	}
-
-	protected Rectangle fill()
-	{
-		return Rectangle(vec2(0,0), divparent.bounds.size);
-	}
-
-	public auto get(string name, this T)()
-	{
-		auto t = cast(T)this;
-
-		static if(__traits(hasMember, T, name) && is(typeof(mixin("t." ~ name)) : div))
-		{
-			return mixin("t." ~ name);
+		if(this.base !is null) {
+			d.setBase(this.base);
 		}
-		else
-		{
-			foreach(m; __traits(allMembers, T))
-			{
-
-				static if(m != "divparent" && m != "parent" && is(typeof(mixin("t." ~ m)) : div) && !is(typeof(mixin("t." ~ m).get!name()) == void))
-				{
-					return mixin("t." ~ m).get!name();
-				}
-			}
-		}
-		assert(0);
+		this.invalidate();
 	}
-}
 
+	void moveBack() {
+		parent.childrenList.moveBack(this.myNode);
+	}
 
+	void moveFront() {
+		parent.childrenList.moveFront(this.myNode);
+	}
 
+	void moveTowardsBack() {
+		parent.childrenList.moveTowardsBack(this.myNode);
+	}
 
+	void moveTowardsFront() {
+		parent.childrenList.moveTowardsFront(this.myNode);
+	}
 
-// DIV Generation code, realy convoluted, beware 
-//	 _____  _              _                           _      _           
-//	|  __ \(_)            | |                         (_)    (_)          
-//	| |  | |___   __   ___| | __ _ ___ ___   _ __ ___  ___  ___ _ __  ___ 
-//	| |  | | \ \ / /  / __| |/ _` / __/ __| | '_ ` _ \| \ \/ / | '_ \/ __|
-//	| |__| | |\ V /  | (__| | (_| \__ \__ \ | | | | | | |>  <| | | | \__ \
-//	|_____/|_| \_/    \___|_|\__,_|___/___/ |_| |_| |_|_/_/\_\_|_| |_|___/
-//	                                                                      
-//	     
+	void removeDiv(div d) {
+		childrenList.removeNode(d.myNode);
+		d.parent = null;
+		invalidate();
+	}
 
-/// Used to indicate that super div needs to know who is extending it(in the form of a template argument)
-public enum needsExtends;
+	package void setBase(Base b) {
+		this.base = b; 
+		doInit();
+		foreach(c; childrenList[]) c.setBase(b);
+	}
 
-/// Generate ui class code from a file in the string import folder
-public mixin template loadUIView(string view)
-{
-	mixin(uiMarkupMixin(import(view)));
-}
+	CList!div children() {
+		return childrenList;
+	}
 
-/// Generate ui class code from the string 
-public mixin template loadUIString(string ui)
-{
-	mixin(uiMarkupMixin(ui));
-}
+	simplegraphics getGraphics() {
+		return parent.getGraphics();
+	}
 
-/// Generates a the D code for a new stylize based on the style markup code provided
-public string customStyleMixin(string code)
-{
-	import graphics.gui.parser.grammar;
-	astNode n;
-	if(!customStyleParse(n, code)) return `static assert(false, "Failed to parse custom style markup");`;
-	styleNode node = cast(styleNode)n;
-	string r = "";
-	r ~= "enum styleMember[] style = super.style ~ "; 
-	r ~= style_array_mixin(node) ~ ";";
-	r ~= "mixin(new_stylize_mixin);";
-	return r;
-}
+	void setStyle(Style s) {
+		style = s;
+		foreach(d; childrenList[]) d.setStyle(s);
+		invalidate();
+	}
 
-/// Generates the D code for a ui based the ui markup code provided
-public string uiMarkupMixin(string code)
-{
-	import graphics.gui.parser.grammar;
-	import std.string;
-	string r = "";
-	astNode node;
-	if(!uiFileParse(node, code)) return `static assert(false, "Failed to parse ui markup");`;
+	vec2 screenToLocal(vec2 point) {
+		auto orig = localToScreen(vec2(0,0));
+		return point - orig;
+	}
 
-	foreach(astNode n; node.children)
-	{
-		if(n.nodeName == "styleNode")
-		{
-
-			// declare a style array
-			auto s = cast(styleNode)n;
-			r ~= "enum styleMember[] " ~ s.name ~ "_style = " ~ style_array_mixin(s) ~ ";";
-		}
-		else if(n.nodeName == "divNode")
-		{
-			auto d = cast(divNode)n;
-			// declar a class for the div and insert type checking for the parent class
-			r ~= `static assert(is(` ~ d.className ~` : div), "Error, class not child of div");`;
-			r ~= `@needsExtends class ` ~ d.name ~ `(ExtendType, ParentType = div) : check_need_extend!(` ~ d.className ~ `, ExtendType, `~ d.name ~ `!(ExtendType, ParentType))` ~ divBodyMixin(d, false);
+	vec2 localToScreen(vec2 point) {
+		if(parent) {
+			return point + parent.localToScreen(bounds.loc);
+		} else {
+			return point;
 		}
 	}
 
-	return r;
-}
-
-/// Generate the code for a div class body
-private string divBodyMixin(divNode node, bool insertExtends = true)
-{
-	// stick in a test to make sure the parent is a div and declare a reference to the parent
-	string r = `{`;
-	r ~= `static assert(is(ParentType : div), "Error, parent not child of div");`;
-	r ~= `public ParentType parent;`;
-
-	if(!insertExtends) r ~= `static if(is(ExtendType == div)){`;
-	r ~= `alias Extend = typeof(this);`;
-	if(!insertExtends) r ~= `}else {alias Extend = ExtendType;}`;
-
-	{
-		// Add all sub divs
-		foreach(astNode n; node.children)
-		{
-			if(n.nodeName == "divNode")
-			{
-				auto d = cast(divNode)n;
-				// makes a private class for the div
-				r ~= `static assert(is(check_need_extend!(` ~ d.className ~ `,` ~ d.name ~ `_type!(Extend),` ~ d.name ~ `_type!(Extend)) : div), "Error, class not child of div ` ~ d.className ~ `");`;
-				r ~= `private class ` ~ d.name ~ `_type(ParentType) : check_need_extend!(` ~ d.className ~ `,` ~ d.name ~ `_type!(Extend),` ~ d.name ~ `_type!(Extend))` ~ divBodyMixin(d);
-				// declares the actuall div with the class we just made 
-				r ~= d.name ~ `_type!(Extend) ` ~ d.name ~ `;`;
-			}
+	div getChildAt(vec2 loc){
+		foreach(c; childrenList[]) {
+			if(c.bounds.contains(loc)) return c;
 		}
-	}
-
-
-	{
-		// stick in a constructor to set parent and init sub divs
-		r ~= `protected override void initProc()`;
-		r ~= `{`; 
-		r ~= `super.initProc();`;
-		r ~= `parent = cast(ParentType)(divparent);`;
-
-		// init all sub divs
-		foreach(astNode n; node.children)
-		{
-			if(n.nodeName == "divNode")
-			{
-				auto d = cast(divNode)n;
-				r ~= d.name ~ ` = new ` ~ d.name ~ `_type!(Extend)();`;
-				r ~= `this.addDiv(` ~ d.name ~ `);`;
-			}
-		}
-		r ~= `}`;
-	}
-
-	r ~= "enum styleMember[] style = "; 
-	foreach(string style; node.styles) r ~= style ~ `_style ~ `;
-	r ~= style_array_mixin(node) ~ ";";
-	r ~= "mixin(new_stylize_mixin);";
-
-
-	r ~= `}`;
-
-	return r;
-}
-
-/// Checks if a type has the attribute @needsExtends
-public template check_need_extend(alias T, E, AE)
-{
-	static if(is(E == div))
-	{
-		alias extends = AE;
-	}
-	else
-	{
-		alias extends = E;
-	}
-
-	import std.traits : hasUDA;
-	static if(hasUDA!(T, needsExtends))
-		alias me = T!(extends);
-	else
-		alias me = T;
-
-	alias check_need_extend = me;
-}
-
-
-
-
-
-
-
-
-
-
-//	  _____ _         _ _           _                 _      
-//	 / ____| |       | (_)         | |               (_)     
-//	| (___ | |_ _   _| |_ _______  | |     ___   __ _ _  ___ 
-//	 \___ \| __| | | | | |_  / _ \ | |    / _ \ / _` | |/ __|
-//	 ____) | |_| |_| | | |/ /  __/ | |___| (_) | (_| | | (__ 
-//	|_____/ \__|\__, |_|_/___\___| |______\___/ \__, |_|\___|
-//	             __/ |                           __/ |       
-//	            |___/                           |___/        
-
-/// Represents an entry into a style
-public struct styleMember
-{
-	string name;
-	string style;
-}
-
-/// A tunel to acces the stylized properties of a div
-private auto stylized_imp(bool fromMe, bool insert_debug_prints, T)(T v)
-{
-	import std.stdio;
-	struct Result
-	{
-		T t;
-		public auto ref opDispatch(string s)()
-	    {
-	    	return get!s();
-	    }
-
-	    private auto ref get(string s)()
-	    {
-	    	static if(insert_debug_prints) write("get ", s, " -- ");
-
-			static if(!__traits(hasMember, t, s) && fromMe)
-			{
-				static if(insert_debug_prints) writeln("Get Local");
-				return stylized_imp!(true, insert_debug_prints)(t.getLocal!s());
-			}
-			else
-			{
-				auto style_t = stylized_imp!(true, insert_debug_prints)(t);
-				string foo()
-				{
-					string r = "";
-					foreach(sty; t.style)
-					{
-						if(sty.name == s) r ~= sty.style ~ ";";
-					} 
-					return r;
-				}
-
-				static if(hasStylizedProp!(s, baseType!T)()) 
-				{
-					baseType!T sup = t;
-					mixin("t." ~ s) = mixin("stylized_imp!(fromMe, insert_debug_prints)(sup)." ~ s); 
-				}
-
-				enum sty = foo();
-				mixin(sty);
-				static if(insert_debug_prints) writeln("Style:");
-				static if(insert_debug_prints) writeln(sty);
-				static if(insert_debug_prints) writeln("-----");
-
-				return stylized_imp!(false, insert_debug_prints)(mixin("t." ~ s));
-			}
-	    }
-	}
-
-	static if(__traits(hasMember, v, "style"))
-	    return Result(v);    	
-	else
-		return v;
-}
-
-public auto stylized(bool fromMe = true, T)(T v)
-{
-	return stylized_imp!(fromMe, false, T)(v);
-}
-
-public auto stylized_debug(bool fromMe = true, T)(T v)
-{
-	import std.stdio;
-	writeln("T Name : ", T.stringof);
-	writeln("T Style : ", T.style);
-	return stylized_imp!(fromMe, true, T)(v);
-}
-
-/// Alias to the base type of a type
-private template baseType(T)
-{
-	import std.traits;
-	static if(BaseClassesTuple!(T).length > 0)
-		alias baseType = BaseClassesTuple!T[0];
-	else 
-		alias baseType = Object;
-}
-
-/// Returns true if the type has a style for s or if the base type has a style for s
-private bool hasStylizedProp(string s, T)()
-{
-	static if(!__traits(hasMember, T, "style")) return false;
-	else
-	{
-		bool foo()
-		{
-			foreach(sty; T.style)
-			{
-				if(sty.name == s) return true;
-			} 
-			return false;
-		}
-
-		static if(foo()) return true;
-		return hasStylizedProp!(s, baseType!T)();
+		return null;
 	}
 }
 
-/// Generate the code for a style body
-private string style_array_mixin(astNode node)
-{
-	string r = `[`;
-	foreach(astNode n; node.children)
-	{
-		if(n.nodeName == "assignStmtNode")
-		{
-			// insert all assignments 
-			auto asn = cast(assignStmtNode)n;
-			r ~= "styleMember(`" ~ asn.name ~ "`, `" ~ asn.left.expressionMixin() ~ " = " ~ asn.right.expressionMixin() ~ "`), ";
-		}
-	}
-	r ~= `]`;
-	return r;
-}
 
-/// A tunel to get locals in another scope
-private enum getLocal_mixin = 
-q{
-	// TODO allow for args to be passed
-	auto ref getLocal(string s)()
-	{
-		return mixin(s);
-	}
-};
 
-/// A stylize proc override that simply applies all the styles for the current div
-public enum new_stylize_mixin = getLocal_mixin ~ 
-q{
-	override void stylizeProc()
-	{
-		import std.stdio;
-		super.stylizeProc();
-		alias t = this;
-		auto style_t = stylized(t);
-		string foo()
-		{
-			string r = "";
-			foreach(sty; style)
-			{
-				r ~= sty.style ~ ";";
-			}
-			return r;
-		}
-		mixin(foo());
-	}
-};

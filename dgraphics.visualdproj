@@ -1,0 +1,253 @@
+<DProject>
+  <ProjectGuid>{30CB9A71-2A95-4972-8AEB-4129F4C808BD}</ProjectGuid>
+  <Config name="debug" platform="x64">
+    <symdebug>1</symdebug>
+    <optimize>0</optimize>
+    <useInline>0</useInline>
+    <release>0</release>
+    <lib>0</lib>
+    <exefile>C:\Users\Tofu Ninja\Desktop\DGraphics\dgraphics.exe</exefile>
+    <imppath>"source" "..\..\AppData\Roaming\dub\packages\derelict-assimp3-1.0.1\source" "..\..\AppData\Roaming\dub\packages\derelict-util-2.0.6\source" "..\..\AppData\Roaming\dub\packages\derelict-fi-1.9.0\source" "..\..\AppData\Roaming\dub\packages\derelict-ft-1.0.2\source" "..\..\AppData\Roaming\dub\packages\derelict-gl3-1.0.18\source" "..\..\AppData\Roaming\dub\packages\derelict-glfw3-1.1.0\source" "..\..\AppData\Roaming\dub\packages\derelict-ode-1.1.2\source"</imppath>
+    <fileImppath>"views"</fileImppath>
+    <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
+    <additionalOptions>-m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64 -m64</additionalOptions>
+    <versionids>DerelictODE_Single tofu_EnableEditor Have_dgraphics Have_derelict_assimp3 Have_derelict_util Have_derelict_fi Have_derelict_ft Have_derelict_gl3 Have_derelict_glfw3 Have_derelict_ode</versionids>
+    <libfiles> </libfiles>
+    <useUnitTests>1</useUnitTests>
+    <obj>0</obj>
+    <link>0</link>
+    <subsystem>0</subsystem>
+    <multiobj>0</multiobj>
+    <singleFileCompilation>2</singleFileCompilation>
+    <oneobj>0</oneobj>
+    <trace>0</trace>
+    <quiet>0</quiet>
+    <verbose>0</verbose>
+    <vtls>0</vtls>
+    <cpu>0</cpu>
+    <isX86_64>1</isX86_64>
+    <isLinux>0</isLinux>
+    <isOSX>0</isOSX>
+    <isWindows>0</isWindows>
+    <isFreeBSD>0</isFreeBSD>
+    <isSolaris>0</isSolaris>
+    <scheduler>0</scheduler>
+    <useDeprecated>0</useDeprecated>
+    <useAssert>0</useAssert>
+    <useInvariants>0</useInvariants>
+    <useIn>0</useIn>
+    <useOut>0</useOut>
+    <useArrayBounds>0</useArrayBounds>
+    <noboundscheck>0</noboundscheck>
+    <useSwitchError>0</useSwitchError>
+    <preservePaths>1</preservePaths>
+    <warnings>1</warnings>
+    <infowarnings>0</infowarnings>
+    <checkProperty>0</checkProperty>
+    <genStackFrame>0</genStackFrame>
+    <pic>0</pic>
+    <cov>0</cov>
+    <nofloat>0</nofloat>
+    <Dversion>2</Dversion>
+    <ignoreUnsupportedPragmas>0</ignoreUnsupportedPragmas>
+    <compiler>0</compiler>
+    <otherDMD>0</otherDMD>
+    <outdir>C:\Users\Tofu Ninja\Desktop\DGraphics\</outdir>
+    <objdir>.dub/obj/debug/dgraphics</objdir>
+    <objname />
+    <libname />
+    <doDocComments>0</doDocComments>
+    <docdir />
+    <docname />
+    <modules_ddoc />
+    <ddocfiles />
+    <doHdrGeneration>0</doHdrGeneration>
+    <hdrdir />
+    <hdrname />
+    <doXGeneration>1</doXGeneration>
+    <xfilename>$(IntDir)\$(TargetName).json</xfilename>
+    <debuglevel>0</debuglevel>
+    <versionlevel>0</versionlevel>
+    <debugids />
+    <dump_source>0</dump_source>
+    <mapverbosity>0</mapverbosity>
+    <createImplib>0</createImplib>
+    <defaultlibname />
+    <debuglibname />
+    <moduleDepsFile />
+    <run>0</run>
+    <runargs />
+    <runCv2pdb>1</runCv2pdb>
+    <pathCv2pdb>$(VisualDInstallDir)cv2pdb\cv2pdb.exe</pathCv2pdb>
+    <cv2pdbPre2043>0</cv2pdbPre2043>
+    <cv2pdbNoDemangle>0</cv2pdbNoDemangle>
+    <cv2pdbEnumType>0</cv2pdbEnumType>
+    <cv2pdbOptions />
+    <objfiles />
+    <linkswitches />
+    <libpaths />
+    <deffile />
+    <resfile />
+    <preBuildCommand />
+    <postBuildCommand />
+    <filesToClean>*.obj;*.cmd;*.build;*.dep</filesToClean>
+  </Config>
+  <Folder name="dgraphics">
+    <Folder name="dgraphics">
+    <Folder name="source">
+    <Folder name="container">
+      <File path="source\container\clist.d" />
+      <File path="source\container\hashmap.d" />
+      <File path="source\container\octree.d" />
+      <File path="source\container\rstring.d" />
+      <File path="source\container\subStruct.d" />
+      <File path="source\container\tree.d" />
+      <File path="source\container\ubyteBuffer.d" />
+    </Folder>
+    <Folder name="editor">
+      <File path="source\editor\concmds.d" />
+      <File path="source\editor\io.d" />
+      <File path="source\editor\messages.d" />
+      <File path="source\editor\ui.d" />
+    </Folder>
+    <Folder name="graphics">
+    <Folder name="gui">
+      <File path="source\graphics\gui\base.d" />
+      <File path="source\graphics\gui\button.d" />
+      <File path="source\graphics\gui\checkbox.d" />
+      <File path="source\graphics\gui\console.d" />
+      <File path="source\graphics\gui\div.d" />
+      <File path="source\graphics\gui\engineProperties.d" />
+      <File path="source\graphics\gui\engineView.d" />
+      <File path="source\graphics\gui\fileExplorer.d" />
+      <File path="source\graphics\gui\horizontalSplit.d" />
+      <File path="source\graphics\gui\label.d" />
+      <File path="source\graphics\gui\messageBox.d" />
+      <File path="source\graphics\gui\package.d" />
+      <File path="source\graphics\gui\panel.d" />
+      <File path="source\graphics\gui\propertyPane.d" />
+      <File path="source\graphics\gui\scrollbox.d" />
+      <File path="source\graphics\gui\siderender.d" />
+      <File path="source\graphics\gui\testGUI.d" />
+      <File path="source\graphics\gui\textbox.d" />
+      <File path="source\graphics\gui\themes.d" />
+      <File path="source\graphics\gui\treeView.d" />
+      <File path="source\graphics\gui\valueSlider.d" />
+      <File path="source\graphics\gui\verticalArrangement.d" />
+      <File path="source\graphics\gui\verticalSplit.d" />
+      <File path="source\graphics\gui\window.d" />
+    </Folder>
+    <Folder name="hw">
+    <Folder name="oglgame">
+      <File path="source\graphics\hw\oglgame\buffer.d" />
+      <File path="source\graphics\hw\oglgame\cursor.d" />
+      <File path="source\graphics\hw\oglgame\fbo.d" />
+      <File path="source\graphics\hw\oglgame\package.d" />
+      <File path="source\graphics\hw\oglgame\rendercommands.d" />
+      <File path="source\graphics\hw\oglgame\sampler.d" />
+      <File path="source\graphics\hw\oglgame\shader.d" />
+      <File path="source\graphics\hw\oglgame\state.d" />
+      <File path="source\graphics\hw\oglgame\texture.d" />
+      <File path="source\graphics\hw\oglgame\vao.d" />
+    </Folder>
+      <File path="source\graphics\hw\enums.d" />
+      <File path="source\graphics\hw\package.d" />
+      <File path="source\graphics\hw\structs.d" />
+      <File path="source\graphics\hw\util.d" />
+    </Folder>
+    <Folder name="render">
+      <File path="source\graphics\render\batcher.d" />
+      <File path="source\graphics\render\glyphBatch.d" />
+      <File path="source\graphics\render\lightBatch.d" />
+      <File path="source\graphics\render\line3Batch.d" />
+      <File path="source\graphics\render\lineBatch.d" />
+      <File path="source\graphics\render\meshBatcher.d" />
+      <File path="source\graphics\render\ovalBatch.d" />
+      <File path="source\graphics\render\rectangleBatch.d" />
+      <File path="source\graphics\render\sceneuniforms.d" />
+      <File path="source\graphics\render\textureQuadRenderer.d" />
+    </Folder>
+      <File path="source\graphics\camera.d" />
+      <File path="source\graphics\color.d" />
+      <File path="source\graphics\font.d" />
+      <File path="source\graphics\image.d" />
+      <File path="source\graphics\mesh.d" />
+      <File path="source\graphics\simplegraphics.d" />
+    </Folder>
+    <Folder name="math">
+    <Folder name="generation">
+      <File path="source\math\generation\sphere.d" />
+    </Folder>
+    <Folder name="geo">
+      <File path="source\math\geo\AABox.d" />
+      <File path="source\math\geo\binpacker2d.d" />
+      <File path="source\math\geo\box_ray_intersect.d" />
+      <File path="source\math\geo\box_sphere_intersect.d" />
+      <File path="source\math\geo\frustum.d" />
+      <File path="source\math\geo\matrix.d" />
+      <File path="source\math\geo\plane.d" />
+      <File path="source\math\geo\quaternion.d" />
+      <File path="source\math\geo\rectangle.d" />
+      <File path="source\math\geo\vector.d" />
+    </Folder>
+    <Folder name="noise">
+      <File path="source\math\noise\perlin.d" />
+      <File path="source\math\noise\poissondisk.d" />
+    </Folder>
+      <File path="source\math\conversion.d" />
+      <File path="source\math\interpolate.d" />
+      <File path="source\math\matrix.d" />
+    </Folder>
+    <Folder name="tofuEngine">
+    <Folder name="components">
+      <File path="source\tofuEngine\components\camera_component.d" />
+      <File path="source\tofuEngine\components\child_entity.d" />
+      <File path="source\tofuEngine\components\lighting.d" />
+      <File path="source\tofuEngine\components\mesh_component.d" />
+      <File path="source\tofuEngine\components\physics_components.d" />
+      <File path="source\tofuEngine\components\player.d" />
+      <File path="source\tofuEngine\components\test_component.d" />
+    </Folder>
+    <Folder name="editor">
+      <File path="source\tofuEngine\editor\overlay.d" />
+      <File path="source\tofuEngine\editor\package.d" />
+    </Folder>
+      <File path="source\tofuEngine\component.d" />
+      <File path="source\tofuEngine\engine.d" />
+      <File path="source\tofuEngine\entity.d" />
+      <File path="source\tofuEngine\level.d" />
+      <File path="source\tofuEngine\package.d" />
+      <File path="source\tofuEngine\render.d" />
+      <File path="source\tofuEngine\resources.d" />
+      <File path="source\tofuEngine\timing.d" />
+    </Folder>
+    <Folder name="util">
+    <Folder name="memory">
+      <File path="source\util\memory\gcTracker.d" />
+      <File path="source\util\memory\noallocator.d" />
+      <File path="source\util\memory\shrinkSubArray.d" />
+    </Folder>
+      <File path="source\util\binOpProxy.d" />
+      <File path="source\util\colorDialogue.d" />
+      <File path="source\util\debugger.d" />
+      <File path="source\util\dump.d" />
+      <File path="source\util\event.d" />
+      <File path="source\util\fileDialogue.d" />
+      <File path="source\util\getChildClasses.d" />
+      <File path="source\util\integerSeq.d" />
+      <File path="source\util\serial.d" />
+      <File path="source\util\serial2.d" />
+      <File path="source\util\shia.d" />
+    </Folder>
+      <File path="source\main.d" />
+    </Folder>
+    <Folder name="views">
+      <File tool="None" path="views\editor.uiv" />
+      <File tool="None" path="views\example.uiv" />
+      <File tool="None" path="views\mesh.frag.glsl" />
+      <File tool="None" path="views\mesh.vert.glsl" />
+    </Folder>
+      <File tool="None" path="dub.json" />
+    </Folder>
+  </Folder>
+</DProject>

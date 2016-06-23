@@ -1,15 +1,54 @@
 {
 	"name": "dgraphics",
-	"description": "Some Graphics",
-	"copyright": "Copyright © 2014, snuffy",
-	"authors": ["Snuffy"],
+	"description": "",
+	"copyright": "Copyright © 2014, Joseph Emmons",
+	"authors": ["Joseph Emmons"],
 	"dependencies": 
 	{
 		"derelict-glfw3": "==1.1.0",
-		"derelict-gl3": "==1.0.12",
+		"derelict-gl3": "==1.0.18",
 		"derelict-fi": "==1.9.0",
 		"derelict-ft": "==1.0.2",
-		"derelict-assimp3": "==1.0.1"
-	}
+		"derelict-assimp3": "==1.0.1",
+		"derelict-ode": "==1.1.2"
+	},
+	"configurations": [
+		{
+			"name": "Editor_debug",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single", "tofu_EnableEditor"], 
+			"buildOptions" : ["unittests", "debugMode", "debugInfo"]
+		},
+		{
+			"name": "Editor_release",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single", "tofu_EnableEditor"], 
+			"buildOptions" : ["releaseMode", "optimize", "inline", "noBoundsCheck"]
+		},
+		{
+			"name": "Engine_debug",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single"],
+			"buildOptions" : ["unittests", "debugMode", "debugInfo"]
+		},
+		{
+			"name": "Engine_release",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single"],
+			"buildOptions" : ["releaseMode", "optimize", "inline", "noBoundsCheck"]
+		},
+		{
+			"name": "Engine_release_profile",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single"],
+			"buildOptions" : ["releaseMode", "optimize", "inline", "noBoundsCheck", "profile"]
+		},
+		{
+			"name": "TestGUI_debug",
+			"targetType": "executable",
+			"versions": ["DerelictODE_Single", "tofu_TestGUI"], 
+			"buildOptions" : ["unittests", "debugMode", "debugInfo"]
+		}
+	]
 }
  

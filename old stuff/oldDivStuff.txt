@@ -1,0 +1,331 @@
+// This was terible, so its not being used any more
+// What I have now is much more simple and strait forward
+
+
+
+/*
+
+
+// DIV Generation code, realy convoluted, beware 
+//	 _____  _              _                           _      _           
+//	|  __ \(_)            | |                         (_)    (_)          
+//	| |  | |___   __   ___| | __ _ ___ ___   _ __ ___  ___  ___ _ __  ___ 
+//	| |  | | \ \ / /  / __| |/ _` / __/ __| | '_ ` _ \| \ \/ / | '_ \/ __|
+//	| |__| | |\ V /  | (__| | (_| \__ \__ \ | | | | | | |>  <| | | | \__ \
+//	|_____/|_| \_/    \___|_|\__,_|___/___/ |_| |_| |_|_/_/\_\_|_| |_|___/
+//	                                                                      
+//	     
+
+/// Used to indicate that super div needs to know who is extending it(in the form of a template argument)
+public enum needsExtends;
+
+/// Generate ui class code from a file in the string import folder
+public mixin template loadUIView(string view)
+{
+	mixin(uiMarkupMixin(import(view)));
+}
+
+/// Generate ui class code from the string 
+public mixin template loadUIString(string ui)
+{
+	mixin(uiMarkupMixin(ui));
+}
+
+/// Generates a the D code for a new stylize based on the style markup code provided
+public string customStyleMixin(string code)
+{
+	import graphics.gui.parser.grammar;
+	astNode n;
+	if(!customStyleParse(n, code)) return `static assert(false, "Failed to parse custom style markup");`;
+	styleNode node = cast(styleNode)n;
+	string r = "";
+	r ~= "enum styleMember[] style = super.style ~ "; 
+	r ~= style_array_mixin(node) ~ ";";
+	r ~= "mixin(new_stylize_mixin);";
+	return r;
+}
+
+/// Generates the D code for a ui based the ui markup code provided
+public string uiMarkupMixin(string code)
+{
+	import graphics.gui.parser.grammar;
+	import std.string;
+	string r = "";
+	astNode node;
+	if(!uiFileParse(node, code)) return `static assert(false, "Failed to parse ui markup");`;
+
+	foreach(astNode n; node.children)
+	{
+		if(n.nodeName == "styleNode")
+		{
+
+			// declare a style array
+			auto s = cast(styleNode)n;
+			r ~= "enum styleMember[] " ~ s.name ~ "_style = " ~ style_array_mixin(s) ~ ";";
+		}
+		else if(n.nodeName == "divNode")
+		{
+			auto d = cast(divNode)n;
+			// declar a class for the div and insert type checking for the parent class
+			r ~= `static assert(is(` ~ d.className ~` : div), "Error, class not child of div");`;
+			r ~= `@needsExtends class ` ~ d.name ~ `(ExtendType, ParentType = div) : check_need_extend!(` ~ d.className ~ `, ExtendType, `~ d.name ~ `!(ExtendType, ParentType))` ~ divBodyMixin(d, false);
+		}
+	}
+
+	return r;
+}
+
+/// Generate the code for a div class body
+private string divBodyMixin(divNode node, bool insertExtends = true)
+{
+	// stick in a test to make sure the parent is a div and declare a reference to the parent
+	string r = `{`;
+	r ~= `static assert(is(ParentType : div), "Error, parent not child of div");`;
+	r ~= `public ParentType parent;`;
+
+	if(!insertExtends) r ~= `static if(is(ExtendType == div)){`;
+	r ~= `alias Extend = typeof(this);`;
+	if(!insertExtends) r ~= `}else {alias Extend = ExtendType;}`;
+
+	{
+		// Add all sub divs
+		foreach(astNode n; node.children)
+		{
+			if(n.nodeName == "divNode")
+			{
+				auto d = cast(divNode)n;
+				// makes a private class for the div
+				r ~= `static assert(is(check_need_extend!(` ~ d.className ~ `,` ~ d.name ~ `_type!(Extend),` ~ d.name ~ `_type!(Extend)) : div), "Error, class not child of div ` ~ d.className ~ `");`;
+				r ~= `private class ` ~ d.name ~ `_type(ParentType) : check_need_extend!(` ~ d.className ~ `,` ~ d.name ~ `_type!(Extend),` ~ d.name ~ `_type!(Extend))` ~ divBodyMixin(d);
+				// declares the actuall div with the class we just made 
+				r ~= d.name ~ `_type!(Extend) ` ~ d.name ~ `;`;
+			}
+		}
+	}
+
+
+	{
+		// stick in a constructor to set parent and init sub divs
+		r ~= `protected override void initProc()`;
+		r ~= `{`; 
+		r ~= `super.initProc();`;
+		r ~= `parent = cast(ParentType)(divparent);`;
+
+		// init all sub divs
+		foreach(astNode n; node.children)
+		{
+			if(n.nodeName == "divNode")
+			{
+				auto d = cast(divNode)n;
+				r ~= d.name ~ ` = new ` ~ d.name ~ `_type!(Extend)();`;
+				r ~= `this.addDiv(` ~ d.name ~ `);`;
+			}
+		}
+		r ~= `}`;
+	}
+
+	r ~= "enum styleMember[] style = "; 
+	foreach(string style; node.styles) r ~= style ~ `_style ~ `;
+	r ~= style_array_mixin(node) ~ ";";
+	r ~= "mixin(new_stylize_mixin);";
+
+
+	r ~= `}`;
+
+	return r;
+}
+
+/// Checks if a type has the attribute @needsExtends
+public template check_need_extend(alias T, E, AE)
+{
+	static if(is(E == div))
+	{
+		alias extends = AE;
+	}
+	else
+	{
+		alias extends = E;
+	}
+
+	import std.traits : hasUDA;
+	static if(hasUDA!(T, needsExtends))
+		alias me = T!(extends);
+	else
+		alias me = T;
+
+	alias check_need_extend = me;
+}
+
+
+
+
+
+
+
+
+
+
+//	  _____ _         _ _           _                 _      
+//	 / ____| |       | (_)         | |               (_)     
+//	| (___ | |_ _   _| |_ _______  | |     ___   __ _ _  ___ 
+//	 \___ \| __| | | | | |_  / _ \ | |    / _ \ / _` | |/ __|
+//	 ____) | |_| |_| | | |/ /  __/ | |___| (_) | (_| | | (__ 
+//	|_____/ \__|\__, |_|_/___\___| |______\___/ \__, |_|\___|
+//	             __/ |                           __/ |       
+//	            |___/                           |___/        
+
+/// Represents an entry into a style
+public struct styleMember
+{
+	string name;
+	string style;
+}
+
+/// A tunel to acces the stylized properties of a div
+private auto stylized_imp(bool fromMe, bool insert_debug_prints, T)(T v)
+{
+	import std.stdio;
+	struct Result
+	{
+		T t;
+		public auto ref opDispatch(string s)()
+	    {
+	    	return get!s();
+	    }
+
+	    private auto ref get(string s)()
+	    {
+	    	static if(insert_debug_prints) write("get ", s, " -- ");
+
+			static if(!__traits(hasMember, t, s) && fromMe)
+			{
+				static if(insert_debug_prints) writeln("Get Local");
+				return stylized_imp!(true, insert_debug_prints)(t.getLocal!s());
+			}
+			else
+			{
+				auto style_t = stylized_imp!(true, insert_debug_prints)(t);
+				string foo()
+				{
+					string r = "";
+					foreach(sty; t.style)
+					{
+						if(sty.name == s) r ~= sty.style ~ ";";
+					} 
+					return r;
+				}
+
+				static if(hasStylizedProp!(s, baseType!T)()) 
+				{
+					baseType!T sup = t;
+					mixin("t." ~ s) = mixin("stylized_imp!(fromMe, insert_debug_prints)(sup)." ~ s); 
+				}
+
+				enum sty = foo();
+				mixin(sty);
+				static if(insert_debug_prints) writeln("Style:");
+				static if(insert_debug_prints) writeln(sty);
+				static if(insert_debug_prints) writeln("-----");
+
+				return stylized_imp!(false, insert_debug_prints)(mixin("t." ~ s));
+			}
+	    }
+	}
+
+	static if(__traits(hasMember, v, "style"))
+	    return Result(v);    	
+	else
+		return v;
+}
+
+public auto stylized(bool fromMe = true, T)(T v)
+{
+	return stylized_imp!(fromMe, false, T)(v);
+}
+
+public auto stylized_debug(bool fromMe = true, T)(T v)
+{
+	import std.stdio;
+	writeln("T Name : ", T.stringof);
+	writeln("T Style : ", T.style);
+	return stylized_imp!(fromMe, true, T)(v);
+}
+
+/// Alias to the base type of a type
+private template baseType(T)
+{
+	import std.traits;
+	static if(BaseClassesTuple!(T).length > 0)
+		alias baseType = BaseClassesTuple!T[0];
+	else 
+		alias baseType = Object;
+}
+
+/// Returns true if the type has a style for s or if the base type has a style for s
+private bool hasStylizedProp(string s, T)()
+{
+	static if(!__traits(hasMember, T, "style")) return false;
+	else
+	{
+		bool foo()
+		{
+			foreach(sty; T.style)
+			{
+				if(sty.name == s) return true;
+			} 
+			return false;
+		}
+
+		static if(foo()) return true;
+		return hasStylizedProp!(s, baseType!T)();
+	}
+}
+
+/// Generate the code for a style body
+private string style_array_mixin(astNode node)
+{
+	string r = `[`;
+	foreach(astNode n; node.children)
+	{
+		if(n.nodeName == "assignStmtNode")
+		{
+			// insert all assignments 
+			auto asn = cast(assignStmtNode)n;
+			r ~= "styleMember(`" ~ asn.name ~ "`, `" ~ asn.left.expressionMixin() ~ " = " ~ asn.right.expressionMixin() ~ "`), ";
+		}
+	}
+	r ~= `]`;
+	return r;
+}
+
+/// A tunel to get locals in another scope
+private enum getLocal_mixin = 
+q{
+	// TODO allow for args to be passed
+	auto ref getLocal(string s)()
+	{
+		return mixin(s);
+	}
+};
+
+/// A stylize proc override that simply applies all the styles for the current div
+public enum new_stylize_mixin = getLocal_mixin ~ 
+q{
+	override void stylizeProc()
+	{
+		import std.stdio;
+		super.stylizeProc();
+		alias t = this;
+		auto style_t = stylized(t);
+		string foo()
+		{
+			string r = "";
+			foreach(sty; style)
+			{
+				r ~= sty.style ~ ";";
+			}
+			return r;
+		}
+		mixin(foo());
+	}
+};*/

@@ -1,0 +1,53 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "dgraphics", "dgraphics.visualdproj", "{30CB9A71-2A95-4972-8AEB-4129F4C808BD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C5915DC5-215E-4BE4-BF43-F489A4D0F66C} = {C5915DC5-215E-4BE4-BF43-F489A4D0F66C}
+		{DA957C04-DD9F-4CEC-9E32-673A58F4BC50} = {DA957C04-DD9F-4CEC-9E32-673A58F4BC50}
+		{984CA508-EB35-4164-94C1-E502ACC3CDF3} = {984CA508-EB35-4164-94C1-E502ACC3CDF3}
+		{591E1DA1-F5A2-418D-A985-A465A7827B06} = {591E1DA1-F5A2-418D-A985-A465A7827B06}
+		{3AC78100-E105-4F92-BB09-234067C10C2F} = {3AC78100-E105-4F92-BB09-234067C10C2F}
+		{5F89A176-D574-4EBA-93F9-58FB25B03F9C} = {5F89A176-D574-4EBA-93F9-58FB25B03F9C}
+		{183B5B4F-6531-4550-89DA-F3D836375C27} = {183B5B4F-6531-4550-89DA-F3D836375C27}
+	EndProjectSection
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-assimp3", "derelict-assimp3.visualdproj", "{C5915DC5-215E-4BE4-BF43-F489A4D0F66C}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-util", "derelict-util.visualdproj", "{183B5B4F-6531-4550-89DA-F3D836375C27}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-fi", "derelict-fi.visualdproj", "{DA957C04-DD9F-4CEC-9E32-673A58F4BC50}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-ft", "derelict-ft.visualdproj", "{984CA508-EB35-4164-94C1-E502ACC3CDF3}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-gl3", "derelict-gl3.visualdproj", "{591E1DA1-F5A2-418D-A985-A465A7827B06}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-glfw3", "derelict-glfw3.visualdproj", "{3AC78100-E105-4F92-BB09-234067C10C2F}"
+EndProject
+Project("{27A14E2A-BE96-4C0B-B66B-876349FA8757}") = "derelict-ode", "derelict-ode.visualdproj", "{5F89A176-D574-4EBA-93F9-58FB25B03F9C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		debug|x64 = debug|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5915DC5-215E-4BE4-BF43-F489A4D0F66C}.debug|x64.ActiveCfg = debug|x64
+		{C5915DC5-215E-4BE4-BF43-F489A4D0F66C}.debug|x64.Build.0 = debug|x64
+		{183B5B4F-6531-4550-89DA-F3D836375C27}.debug|x64.ActiveCfg = debug|x64
+		{183B5B4F-6531-4550-89DA-F3D836375C27}.debug|x64.Build.0 = debug|x64
+		{984CA508-EB35-4164-94C1-E502ACC3CDF3}.debug|x64.ActiveCfg = debug|x64
+		{984CA508-EB35-4164-94C1-E502ACC3CDF3}.debug|x64.Build.0 = debug|x64
+		{5F89A176-D574-4EBA-93F9-58FB25B03F9C}.debug|x64.ActiveCfg = debug|x64
+		{5F89A176-D574-4EBA-93F9-58FB25B03F9C}.debug|x64.Build.0 = debug|x64
+		{DA957C04-DD9F-4CEC-9E32-673A58F4BC50}.debug|x64.ActiveCfg = debug|x64
+		{DA957C04-DD9F-4CEC-9E32-673A58F4BC50}.debug|x64.Build.0 = debug|x64
+		{3AC78100-E105-4F92-BB09-234067C10C2F}.debug|x64.ActiveCfg = debug|x64
+		{3AC78100-E105-4F92-BB09-234067C10C2F}.debug|x64.Build.0 = debug|x64
+		{30CB9A71-2A95-4972-8AEB-4129F4C808BD}.debug|x64.ActiveCfg = debug|x64
+		{30CB9A71-2A95-4972-8AEB-4129F4C808BD}.debug|x64.Build.0 = debug|x64
+		{591E1DA1-F5A2-418D-A985-A465A7827B06}.debug|x64.ActiveCfg = debug|x64
+		{591E1DA1-F5A2-418D-A985-A465A7827B06}.debug|x64.Build.0 = debug|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

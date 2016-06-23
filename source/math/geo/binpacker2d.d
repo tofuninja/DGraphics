@@ -3,7 +3,10 @@ import std.algorithm;
 import std.range;
 import math.geo.rectangle;
 import math.matrix;
-import util.memory.malloc;
+import std.experimental.allocator;
+import std.experimental.allocator.mallocator;
+
+alias alloc = Mallocator.instance;
 
 private struct packNode
 {
@@ -12,54 +15,46 @@ private struct packNode
 	packNode* down;
 	packNode* right;
 	
-	this(iRectangle r)
-	{
+	this(iRectangle r) {
 		rec = r;
 	}
 	
-	~this()
-	{
-		if(down) freeT(down);
-		if(right) freeT(right);
+	~this() {
+		if(down) alloc.dispose(down);
+		if(right) alloc.dispose(right);
 	}
 }
 
 private packNode* root;
 
-ivec2 binPack2D(iRectangle[] input) 
-{
-	auto r = mallocTA!(iRectangle*)(input.length);
-	for(int i = 0; i < input.length; i++)
-	{
+ivec2 binPack2D(iRectangle[] input) {
+	auto r = alloc.makeArray!(iRectangle*)(input.length);
+	for(int i = 0; i < input.length; i++) {
 		r[i] = &input[i];
 	}
 
 	auto rtn = binPack2D_imp(r);
 
-	freeT(r);
+	alloc.dispose(r);
 	return rtn;
 }
 
-ivec2 binPack2D(iRectangle*[] input) 
-{
-	auto r = mallocTA!(iRectangle*)(input.length);
-	for(int i = 0; i < input.length; i++)
-	{
+ivec2 binPack2D(iRectangle*[] input) {
+	auto r = alloc.makeArray!(iRectangle*)(input.length);
+	for(int i = 0; i < input.length; i++) {
 		r[i] = input[i];
 	}
 	
 	auto rtn = binPack2D_imp(r);
 	
-	freeT(r);
+	alloc.dispose(r);
 	return rtn;
 }
 
-ivec2 binPack2D(R)(R input, size_t count) if(is(typeof(R.init.front) == iRectangle*))
-{
-	auto r = mallocTA!(iRectangle*)(count);
+ivec2 binPack2D(R)(R input, size_t count) if(is(typeof(R.init.front) == iRectangle*)) {
+	auto r = alloc.makeArray!(iRectangle*)(count);
 	int i = 0;
-	foreach(p; input)
-	{
+	foreach(p; input) {
 		if(i >= count) break;
 		r[i] = p;
 		i++;
@@ -67,17 +62,15 @@ ivec2 binPack2D(R)(R input, size_t count) if(is(typeof(R.init.front) == iRectang
 	
 	auto rtn = binPack2D_imp(r);
 	
-	freeT(r);
+	alloc.dispose(r);
 	return rtn;
 }
 
-ivec2 binPack2D(R)(R input) if(is(typeof(R.init.front) == iRectangle*) && hasLength!R)
-{
+ivec2 binPack2D(R)(R input) if(is(typeof(R.init.front) == iRectangle*) && hasLength!R) {
 	auto count = input.length;
-	auto r = mallocTA!(iRectangle*)(count);
+	auto r = alloc.makeArray!(iRectangle*)(count);
 	int i = 0;
-	foreach(p; input)
-	{
+	foreach(p; input) {
 		if(i >= count) break;
 		r[i] = p;
 		i++;
@@ -85,7 +78,7 @@ ivec2 binPack2D(R)(R input) if(is(typeof(R.init.front) == iRectangle*) && hasLen
 	
 	auto rtn = binPack2D_imp(r);
 	
-	freeT(r);
+	alloc.dispose(r);
 	return rtn;
 }
 
@@ -93,17 +86,15 @@ ivec2 binPack2D(R)(R input) if(is(typeof(R.init.front) == iRectangle*) && hasLen
 
 
 
-private ivec2 binPack2D_imp(iRectangle*[] r) 
-{
+private ivec2 binPack2D_imp(iRectangle*[] r) {
 
 	r.sort!("(a.size.x*a.size.y) > (b.size.x*b.size.y)")();
 	
 	auto w = (!r.empty) ? r.front.size.x : 0;
 	auto h = (!r.empty) ? r.front.size.y : 0;
-	root = mallocT!packNode(iRectangle(0,0,w,h));
+	root = alloc.make!packNode(iRectangle(0,0,w,h));
 	
-	foreach(block; r)
-	{
+	foreach(block; r) {
 		auto t = findNode(root, block.size.x, block.size.y);
 		if(t !is null)
 			splitNode(t, *block);
@@ -111,33 +102,29 @@ private ivec2 binPack2D_imp(iRectangle*[] r)
 			growNode(*block);
 	}
 	auto rtn = root.rec.size;
-	freeT(root);
+	alloc.dispose(root);
 	return rtn;
 }
 	
-private packNode* findNode(packNode* root, int w, int h) 
-{
+private packNode* findNode(packNode* root, int w, int h) {
 	if(root is null) return null;
 
-	if (root.used)
-	{
+	if (root.used) {
 		auto t = findNode(root.right, w, h);
 		if(t !is null) return t;
 		return findNode(root.down, w, h);
-	}
-	else if ((w <= root.rec.size.x) && (h <= root.rec.size.y))
+	} else if ((w <= root.rec.size.x) && (h <= root.rec.size.y))
 		return root;
 	else
 		return null;
 }
 		
-private packNode* splitNode(packNode* node, ref iRectangle rec) 
-{
+private packNode* splitNode(packNode* node, ref iRectangle rec) {
 	auto w = rec.size.x;
 	auto h = rec.size.y;
 	node.used = true;
-	node.down  = mallocT!packNode(iRectangle( node.rec.loc.x, node.rec.loc.y + h, node.rec.size.x, node.rec.size.y - h));
-	node.right  = mallocT!packNode(iRectangle(node.rec.loc.x + w, node.rec.loc.y, node.rec.size.x - w, h));
+	node.down  = alloc.make!packNode(iRectangle( node.rec.loc.x, node.rec.loc.y + h, node.rec.size.x, node.rec.size.y - h));
+	node.right  = alloc.make!packNode(iRectangle(node.rec.loc.x + w, node.rec.loc.y, node.rec.size.x - w, h));
 	rec.loc = node.rec.loc;
 	return node;
 }
@@ -162,13 +149,12 @@ private void growNode(ref iRectangle rec) {
 		assert(false);
 }
 
-private void growRight(ref iRectangle rec) 
-{
+private void growRight(ref iRectangle rec) {
 	auto w = rec.size.x;
 	auto h = rec.size.y;
 	auto cur = root;
 
-	root = mallocT!packNode(iRectangle(
+	root = alloc.make!packNode(iRectangle(
 			0,
 			0, 
 			cur.rec.size.x + w,
@@ -177,7 +163,7 @@ private void growRight(ref iRectangle rec)
 
 	root.used = true;
 	root.down = cur;
-	root.right = mallocT!packNode(iRectangle(cur.rec.size.x, 0, w, cur.rec.size.y));
+	root.right = alloc.make!packNode(iRectangle(cur.rec.size.x, 0, w, cur.rec.size.y));
 
 	auto t = findNode(root, w, h);
 	if (t !is null)
@@ -191,7 +177,7 @@ private void growDown(ref iRectangle rec) {
 	auto h = rec.size.y;
 	auto cur = root;
 
-	root = mallocT!packNode(iRectangle(
+	root = alloc.make!packNode(iRectangle(
 			0,
 			0, 
 			cur.rec.size.x,
@@ -199,7 +185,7 @@ private void growDown(ref iRectangle rec) {
 			));
 
 	root.used = true;
-	root.down = mallocT!packNode(iRectangle(0, cur.rec.size.y, cur.rec.size.x, h));
+	root.down = alloc.make!packNode(iRectangle(0, cur.rec.size.y, cur.rec.size.x, h));
 	root.right = cur;
 
 	auto t = findNode(root, w, h);

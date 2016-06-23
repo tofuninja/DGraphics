@@ -3,20 +3,37 @@ import math.matrix;
 
 alias Plane = PlaneT!float;
 
-struct PlaneT(T = float)
-{
-	public matrix!(3,1,T) N;
-	public T D;
+struct PlaneT(T) {
+	VectorT!(3,T) N;
+	T D;
 
-	public this(matrix!(3,1,T) A, matrix!(3,1,T) B, matrix!(3,1,T) C)
-	{
+	this(VectorT!(3,T) A, VectorT!(3,T) B, VectorT!(3,T) C) {
 		N = normalize(cross((B - A),(C - A)));
 		D = -dot(N, A);
 	}
-
-
-	public T intersect(matrix!(3,1,T) v)
-	{
-		return dot( matrix!(4,1,T)(N.x, N.y, N.z, D) ,  matrix!(4,1,T)(v.x, v.y, v.z, 1));
+	
+	this(MatrixT!(4,T) mat) {
+		alias vec3 = VectorT!(3,T);
+		auto a = (mat*vec4(0,0,0,1)).xyz;
+		auto b = (mat*vec4(0,0,1,1)).xyz;
+		auto c = (mat*vec4(1,0,0,1)).xyz;
+		this(a,b,c);
 	}
+
+	T intersect(VectorT!(3,T) v) {
+		return dot( N~D, v~1);
+	}
+}
+
+bool ray_plane_intersect(T)(PlaneT!T p, VectorT!(3,T) ray_start, VectorT!(3,T) ray_dir, out T dist) {
+	auto d = dot(ray_dir, p.N);
+	auto n = -(dot(ray_start, p.N) + p.D);
+
+	if(d == 0) {
+		dist = 0;
+		return false;
+	}
+	
+	dist = n/d;
+	return true;
 }

@@ -2,12 +2,10 @@
 
 import graphics.hw.enums;
 import graphics.hw.structs;
-import graphics.hw.renderlist;
  
 import graphics.hw.oglgame.state;
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
-import derelict.freetype.ft;
 import derelict.opengl3.gl3;
 
 public struct vaoRef
@@ -16,32 +14,28 @@ public struct vaoRef
 	package GLuint id = 0;
 }
 
-public vaoRef createVao(vaoCreateInfo info) @nogc
+public vaoRef createVao(hwVaoCreateInfo info) @nogc
 {
 	vaoRef r;
 	
 	glCreateVertexArrays(1, &r.id);
 	
-	for(int i = 0; i < 16; i++)
-	{
+	for(int i = 0; i < 16; i++) {
 		auto a = info.attachments[i];
-		if(a.enabled)
-		{
+		if(a.enabled) {
 			glEnableVertexArrayAttrib(r.id, i);
 			glVertexArrayAttribFormat(r.id, i, a.elementCount, oglgVertTypeToOglenum(a.elementType), GL_FALSE, a.offset);
 			glVertexArrayAttribBinding(r.id, i, a.bindIndex);
 		}
 	}
 	
-	for(int i = 0; i < 16; i++)
-	{
+	for(int i = 0; i < 16; i++) {
 		auto d = info.bindPointDivisors[i];
-		if(d != 0)
-		{
+		if(d != 0) {
 			glVertexArrayBindingDivisor(r.id, i, d);
 		}
 	}
-
+	oglgCheckError();
 	return r;
 }
 
@@ -49,17 +43,16 @@ public void destroyVao(ref vaoRef obj) @nogc
 {
 	glDeleteVertexArrays(1, &obj.id);
 	obj.id = 0;
+	oglgCheckError();
 }
 
 /**
  * Convert a vertex type to its corresponding ogl enum
  */
-package GLenum oglgVertTypeToOglenum(vertexType t) @nogc
+package GLenum oglgVertTypeToOglenum(hwVertexType t) @nogc
 {
-	with(vertexType)
-	{
-		switch(t)
-		{
+	with(hwVertexType) {
+		switch(t) {
 			case int8:		return GL_BYTE;
 			case int16:		return GL_SHORT;
 			case int32:		return GL_INT;

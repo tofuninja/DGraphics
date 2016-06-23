@@ -2,12 +2,10 @@
 
 import graphics.hw.enums;
 import graphics.hw.structs;
-import graphics.hw.renderlist;
  
 import graphics.hw.oglgame.state;
 import derelict.glfw3.glfw3;
 import derelict.freeimage.freeimage;
-import derelict.freetype.ft;
 import derelict.opengl3.gl3;
 
 public struct shaderRef
@@ -16,7 +14,7 @@ public struct shaderRef
 	package GLuint id = 0;
 }
 
-public shaderRef createShader(shaderCreateInfo info) @nogc
+public shaderRef createShader(hwShaderCreateInfo info) @nogc
 {
 	shaderRef r;
 	
@@ -29,8 +27,7 @@ public shaderRef createShader(shaderCreateInfo info) @nogc
 	
 	r.id = glCreateProgram();
 	
-	foreach(GLuint s; stages)
-	{
+	foreach(GLuint s; stages) {
 		if(s != 0) glAttachShader(r.id, s);
 	}
 	
@@ -41,13 +38,12 @@ public shaderRef createShader(shaderCreateInfo info) @nogc
 	glGetProgramiv(r.id, GL_LINK_STATUS, &status);
 	if(status == GL_FALSE) assert(false, "Shader link failure");
 
-	foreach(GLuint s; stages)
-	{
+	foreach(GLuint s; stages) {
 		if(s == 0) continue;
 		glDetachShader(r.id, s);
 		glDeleteShader(s);
 	}
-
+	oglgCheckError();
 	return r;
 }
 
@@ -55,6 +51,7 @@ public void destroyShader(ref shaderRef obj) @nogc
 {
 	glDeleteProgram(obj.id);
 	obj.id = 0;
+	oglgCheckError();
 }
 
 /**
@@ -87,6 +84,6 @@ package GLuint oglgCreateStage(string source, oglgShaderStage stage) @nogc
 	GLint status;
 	glGetShaderiv(id, GL_COMPILE_STATUS, &status);
 	if(status == false) assert(false, "Shader compile failure");
-	
+	oglgCheckError();
 	return id;
 }

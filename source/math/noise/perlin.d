@@ -7,8 +7,7 @@ public struct perlinNoise
 	private int s,o,ss;
 	float a;
 
-	public this(int seed, int octive, int startSize, float amp)
-	{
+	public this(int seed, int octive, int startSize, float amp) {
 		import std.random;
 		s = seed;
 		o = octive;
@@ -19,12 +18,10 @@ public struct perlinNoise
 		rnd.seed(seed);
 
 		data = new float[][octive];
-		for(int i = 0; i < o; i++)
-		{
+		for(int i = 0; i < o; i++) {
 			int size = (startSize + 1)*(startSize + 1);
 			data[i] = new float[size];
-			for(int j = 0; j < size; j++)
-			{
+			for(int j = 0; j < size; j++) {
 				data[i][j] = cast(float)((cast(double)rnd.front)/uint.max)*2.0f - 1.0f;
 				rnd.popFront();
 			}
@@ -40,10 +37,8 @@ public struct perlinNoise
 
 		float fs = cast(float)size;
 
-		for(int i = 0; i < size; i++)
-		{
-			for(int j = 0; j < size; j++)
-			{
+		for(int i = 0; i < size; i++) {
+			for(int j = 0; j < size; j++) {
 				ubyte p = cast(ubyte)((get(i/fs, j/fs)+1)*127.5);
 				pimg[i,j] = Color(p,p,p);
 			}
@@ -51,20 +46,16 @@ public struct perlinNoise
 		return pimg; 
 	}
 
-	public auto flatten(int size)
-	{
+	public auto flatten(int size) {
 		float[] dat = new float[size*size];
-		void setDat(int x, int y, float v)
-		{
+		void setDat(int x, int y, float v) {
 			dat[x*size + y] = v;
 		}
 		
 		float fs = cast(float)size;
 		
-		for(int i = 0; i < size; i++)
-		{
-			for(int j = 0; j < size; j++)
-			{
+		for(int i = 0; i < size; i++) {
+			for(int j = 0; j < size; j++) {
 				float v = get(i/fs, j/fs);
 				setDat(i, j, v);
 			}
@@ -73,21 +64,17 @@ public struct perlinNoise
 		
 	}
 
-	public auto flattenRidged(int size)
-	{
+	public auto flattenRidged(int size) {
 		import std.math;
 		float[] dat = new float[size*size];
-		void setDat(int x, int y, float v)
-		{
+		void setDat(int x, int y, float v) {
 			dat[x*size + y] = v;
 		}
 		
 		float fs = cast(float)size;
 		
-		for(int i = 0; i < size; i++)
-		{
-			for(int j = 0; j < size; j++)
-			{
+		for(int i = 0; i < size; i++) {
+			for(int j = 0; j < size; j++) {
 				float v = getRidged(i/fs, j/fs);
 				setDat(i, j, v);
 			}
@@ -96,18 +83,15 @@ public struct perlinNoise
 		
 	}
 
-	public float get(float x, float y)
-	{
+	public float get(float x, float y) {
 		return getVal(o,ss,a,x,y);
 	}
 
-	public float getRidged(float x, float y)
-	{
+	public float getRidged(float x, float y) {
 		return getValR(o,ss,a,x,y);
 	}
 
-	private float getVal(int octive, int startSize, float amp, float x, float y)
-	{
+	private float getVal(int octive, int startSize, float amp, float x, float y) {
 		import math.interpolate;
 		import std.random;
 		import std.math;
@@ -121,8 +105,7 @@ public struct perlinNoise
 		dx = fx - ix;
 		dy = fy - iy;
 		
-		float rxy(float inx, float iny)
-		{
+		float rxy(float inx, float iny) {
 			int intx = (cast(int)inx);// % startSize;
 			intx %= startSize;
 			int inty = (cast(int)iny) % startSize;
@@ -143,8 +126,7 @@ public struct perlinNoise
 		else return v + getVal(octive-1, startSize*2, amp/2.0f, x, y);
 	}
 
-	private float getValR(int octive, int startSize, float amp, float x, float y)
-	{
+	private float getValR(int octive, int startSize, float amp, float x, float y) {
 		import math.interpolate;
 		import std.random;
 		import std.math;
@@ -158,8 +140,7 @@ public struct perlinNoise
 		dx = fx - ix;
 		dy = fy - iy;
 		
-		float rxy(float x, float y)
-		{
+		float rxy(float x, float y) {
 			int id = (cast(int)x)*startSize + (cast(int)y);
 			return data[o-octive][id%(data[o-octive].length)]; // loops around if you index to far
 		}
@@ -179,8 +160,7 @@ public struct perlinNoise
 	}
 }
 
-public float perlin(int seed, int octive, int startSize, float amp, float x, float y)
-{
+public float perlin(int seed, int octive, int startSize, float amp, float x, float y) {
 	import math.interpolate;
 	import std.random;
 	import std.math;
@@ -194,8 +174,7 @@ public float perlin(int seed, int octive, int startSize, float amp, float x, flo
 	dx = fx - ix;
 	dy = fy - iy;
 
-	float rxy(float x, float y)
-	{
+	float rxy(float x, float y) {
 		import std.random;
 		auto rnd = rndGen();
 		rnd.seed(cast(int)(x)*seed + cast(int)(y) + octive + seed);

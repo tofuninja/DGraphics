@@ -10,7 +10,7 @@
 //                                     
 // Various enums for use in the Game
 
-enum cmpFunc
+enum hwCmpFunc
 {
 	never,
 	always,
@@ -24,7 +24,7 @@ enum cmpFunc
 	count
 }
 
-enum renderMode
+enum hwRenderMode
 {
 	points,
 	triangles,
@@ -36,7 +36,7 @@ enum renderMode
 	count
 }
 
-enum textureType
+enum hwTextureType
 {
 	tex1D,
 	tex2D,
@@ -49,12 +49,19 @@ enum textureType
 	count
 }
 
-enum colorFormat
+enum hwColorFormat
 {
+	// Unsigned int
 	R_u8,
 	RG_u8,
 	RGB_u8,
 	RGBA_u8,
+
+	// Normalized 
+	R_n8,
+	RG_n8,
+	RGB_n8,
+	RGBA_n8,
 	
 	R_f32,
 	RG_f32,
@@ -70,7 +77,7 @@ enum colorFormat
 	count
 }
 
-enum filterMode
+enum hwFilterMode
 {
 	nearest,
 	linear,
@@ -79,7 +86,7 @@ enum filterMode
 	count
 }
 
-enum mipmapFilterMode
+enum hwMipmapFilterMode
 {
 	none,
 	nearest,
@@ -88,7 +95,7 @@ enum mipmapFilterMode
 	count
 }
 
-enum wrapMode
+enum hwWrapMode
 {
 	repeat,
 	mirrorRepeat,
@@ -98,7 +105,7 @@ enum wrapMode
 	count
 }
 
-enum vertexType
+enum hwVertexType
 {
 	int8,
 	int16,
@@ -112,7 +119,7 @@ enum vertexType
 	count
 }
 
-enum indexSize
+enum hwIndexSize
 {
 	uint8,
 	uint16,
@@ -121,7 +128,7 @@ enum indexSize
 	count
 }
 
-enum bufferUsage
+enum hwBufferUsage
 {
 	vertex,
 	uniform,
@@ -130,7 +137,7 @@ enum bufferUsage
 	count
 }
 
-enum blendMode
+enum hwBlendMode
 {
 	add,
 	subtract,
@@ -141,7 +148,7 @@ enum blendMode
 	count
 }
 
-enum blendParameter
+enum hwBlendParameter
 {
 	zero,
 	one,
@@ -157,7 +164,7 @@ enum blendParameter
 	count
 }
 
-enum frontFaceMode
+enum hwFrontFaceMode
 {
 	clockwise,
 	counter_clockwise,
@@ -165,8 +172,9 @@ enum frontFaceMode
 	count
 }
 
-enum key
+enum hwKey
 {
+	NO_KEY = 0,
 	SPACE = 32 ,
 	APOSTROPHE = 39,
 	COMMA = 44,
@@ -291,7 +299,7 @@ enum key
 	count
 }
 
-enum mouseButton
+enum hwMouseButton
 {
 	MOUSE_1 = 0,
 	MOUSE_2 = 1,
@@ -312,11 +320,49 @@ enum mouseButton
 	MOUSE_DOUBLE = MOUSE_9
 }
 
-enum keyModifier
+enum hwKeyModifier
 {
 	shift = 1,
 	ctrl = 2,
 	alt = 4,
-	superMod = 8
+	superMod = 8,
+
+	count
 }
 
+enum hwCursorMode
+{
+	normal,
+	hidden,
+	captured,
+
+	count
+}
+
+enum hwSimpleCursor{
+	arrow,
+	arrow_and_hourglass,
+	arrow_and_question,
+	hourglass,
+	i_bar,
+	cross_hair,
+	hand,
+	size_h,
+	size_v,
+	size_all,
+	size_forward_arrow,
+	size_back_arrow,
+	no_cursor,
+	
+	
+	slash_circle,
+	
+
+	count
+}
+
+//enum hwWindowSizeState{
+//    minimized,
+//    maximized,
+//    
+//}

@@ -210,7 +210,7 @@ private string writelnstring(T...)(T args)
 		}
 		else static if (isSomeString!A)
 		{
-			import std.range.primitives : put;
+			import std.range : put;
 			put(w, arg);
 		}
 		else static if (isIntegral!A)
@@ -224,7 +224,7 @@ private string writelnstring(T...)(T args)
 		}
 		else static if (isSomeChar!A)
 		{
-			import std.range.primitives : put;
+			import std.range : put;
 			put(w, arg);
 		}
 		else
